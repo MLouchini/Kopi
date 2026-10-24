@@ -28,6 +28,7 @@ public partial class MainWindow : Window {
         InitializeComponent(); runtime = new(store); model.Authenticate(runtime.ApiKey); ai = new(model);
         try { workflows = store.Load(); bridge.Start(); } catch (Exception e) { StatusText.Text = e.Message; }
         PairCodeBox.Text = bridge.PairCode; Refresh();
+        if(!File.Exists(store.PathFor("model.gguf")))Tabs.SelectedIndex=3;
         bridge.Received += e => Dispatcher.InvokeAsync(() => OnEvidence(e));
         tray.DoubleClick += (_,_) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
         var menu = new System.Windows.Forms.ContextMenuStrip(); menu.Items.Add("Open Kopi", null, (_,_)=>Dispatcher.Invoke(()=>{Show();WindowState=WindowState.Normal;Activate();}));

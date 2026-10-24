@@ -25,6 +25,8 @@ jobs:
         run: dotnet test tests/Kopi.Tests --no-build -c Release --logger "trx;LogFileName=windows.trx"
       - name: Publish self-contained Windows application
         run: dotnet publish src/Kopi.Desktop -c Release -r win-x64 --self-contained true -o artifacts/app -p:PublishReadyToRun=true
+      - name: Bundle and validate native runtime prerequisites
+        run: ./scripts/package-native.ps1
       - name: UI smoke pass
         run: ./scripts/ui-smoke.ps1 -ExePath "$PWD/artifacts/app/Kopi.exe"
       - name: Package ZIP
@@ -54,4 +56,5 @@ jobs:
             artifacts/Kopi-win-x64.zip
             artifacts/Kopi-Setup.exe
             artifacts/SHA256SUMS.txt
+            artifacts/ui-smoke.png
           generate_release_notes: true

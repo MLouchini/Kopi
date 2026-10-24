@@ -29,6 +29,8 @@ public sealed class ModelRuntime(LocalStore store) : IDisposable {
         }
         var runtimeDir = store.PathFor("runtime"); Directory.CreateDirectory(runtimeDir);
         ZipFile.ExtractToDirectory(store.PathFor(m.Runtime.FileName), runtimeDir, true);
+        var native=Path.Combine(AppContext.BaseDirectory,"native-runtime");
+        if(Directory.Exists(native))foreach(var dll in Directory.GetFiles(native,"*.dll"))File.Copy(dll,Path.Combine(runtimeDir,Path.GetFileName(dll)),true);
         File.Copy(store.PathFor(m.Model.FileName), store.PathFor("model.gguf"), true);
         File.WriteAllText(store.PathFor("installed-model.txt"), m.ModelName);
     }
