@@ -22,7 +22,7 @@ async function appendRow(tabId,p){
   const cmd=(method,params={})=>chrome.debugger.sendCommand({tabId},method,params);
   const name=`'${p.sheetName.replaceAll("'","''")}'!A${next}`;
   const focus=await cmd('Runtime.evaluate',{expression:`(()=>{const e=document.querySelector('input.waffle-name-box, input#t-name-box, #t-name-box input, input[aria-label="Name box"]');if(!e)return false;e.focus();e.select();return true})()`,returnByValue:true});
-  if(!focus.result.value)throw Error('Cannot locate Sheets name box. Open the spreadsheet in editing mode.');
+  if(!focus.result?.value){const info=await cmd('Runtime.evaluate',{expression:"JSON.stringify({title:document.title,url:location.origin+location.pathname,inputs:document.querySelectorAll('input').length})",returnByValue:true});throw Error('Cannot locate Sheets name box. Open the spreadsheet in editing mode. Context: '+(info.result?.value||JSON.stringify(focus)));}
   await cmd('Input.insertText',{text:name});
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
   stage='writing clipboard';const clipboard=await cmd('Runtime.evaluate',{expression:`navigator.clipboard.writeText(${JSON.stringify(values.join('\t'))})`,awaitPromise:true,userGesture:true});
