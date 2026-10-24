@@ -29,3 +29,5 @@ On Windows: `dotnet run --project src/Kopi.Desktop`. CI builds and tests on Wind
 [Architecture and decisions](docs/architecture.md) · [Privacy and permissions](docs/privacy.md) · [First-run test](docs/first-run.md)
 
 The follow-up preview adds [learned verification workflows](docs/verification-workflows.md): after one recording and explicit enablement, a scoped workflow can request and transfer a fresh numeric code automatically. The local model learns the source/destination bindings; actual codes remain transient in the extension. Requires observable controls, identities and timestamps. This has simulated messaging coverage, not certification against your real WhatsApp or university account. `Windows real model QA` is an opt-in, heavier workflow that downloads and runs the actual model twice on Windows.
+
+Continuing on the user’s Windows machine? Start with [HANDOFF.md](HANDOFF.md) for the exact checkpoint, QA evidence, current artifact and unverified account-specific work.
