@@ -15,7 +15,7 @@ public sealed class RealModelTests {
         var w=await ai.Discover(trace,default);
         var reportDir=Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath();Directory.CreateDirectory(reportDir);
         await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-discovery.json"),Json.Write(w));
-        Assert.Contains(w.Steps,s=>s.Kind=="appendRow");Assert.Equal(5,w.Columns.Length);Assert.DoesNotContain(w.Variables,v=>v.Description.Contains("Acme Labs"));
+        Assert.Contains(w.Steps,s=>s.Kind=="appendRow");Assert.Equal(5,w.Columns.Length);w.Validate();Assert.DoesNotContain(w.Variables,v=>v.Description.Contains("Acme Labs"));
         foreach(var page in new[]{new Evidence("page","https://jobs.other.test/role/77","Opportunity at Nova","<Overview> Nova Robotics is hiring a Research Intern. Office: Bristol. Application: https://jobs.other.test/role/77. Compensation not disclosed."),new Evidence("page","https://work.third.test/vacancy/42","Careers","Position: Research Intern | Organisation: Nova Robotics | Work location: Bristol | Apply here: https://work.third.test/vacancy/42")}) {
             var values=await ai.Extract(w,page,default);
             Assert.Contains(values.Values,v=>v.Contains("Nova Robotics"));Assert.Contains(values.Values,v=>v.Contains("Research Intern"));Assert.Contains(values.Values,v=>v.Contains("Bristol"));Assert.DoesNotContain(values.Values,v=>v.Contains("Acme")||v.Contains("25,000"));

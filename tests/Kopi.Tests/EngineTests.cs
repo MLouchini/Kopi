@@ -29,7 +29,7 @@ public sealed class EngineTests {
             var count=browser.Writes;await Assert.ThrowsAsync<InvalidOperationException>(()=>executor.Run(w,new(){{"name","New Person"}},new Progress<string>(),default));Assert.Equal(count,browser.Writes);
         }finally{Directory.Delete(dir,true);}
     }
-    sealed class InvalidModel : ILocalModel { public Task<string> Complete(string instruction,string evidence,CancellationToken ct)=>Task.FromResult("not JSON"); }
+    sealed class InvalidModel : ILocalModel { public Task<string> Complete(string instruction,string evidence,CancellationToken ct,System.Text.Json.JsonElement? schema=null)=>Task.FromResult("not JSON"); }
     [Fact] public async Task InvalidModelOutputFailsClosed()=>await Assert.ThrowsAsync<System.Text.Json.JsonException>(()=>new Intelligence(new InvalidModel()).Discover([new("page","https://example.org","Test")],default));
     [Fact] public async Task UnapprovedWorkflowDoesNotWrite() {
         var b=new Browser();var w=Sample();w.Approved=false;var dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString());

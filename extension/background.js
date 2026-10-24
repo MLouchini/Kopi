@@ -11,7 +11,7 @@ async function inject(id,method,payload){await chrome.scripting.executeScript({t
 function parseCsv(text){let rows=[],row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(!quoted&&(c===','||c==='\n')){row.push(field.replace(/\r$/,''));field='';if(c==='\n'){rows.push(row);row=[];}}else field+=c;}row.push(field.replace(/\r$/,''));if(row.some(Boolean))rows.push(row);return rows;}
 async function appendRow(tabId,p){
  const u=new URL(p.step.url);if(u.hostname!=='docs.google.com'||!/^\/spreadsheets\/d\/[\w-]+/.test(u.pathname))throw Error('appendRow currently supports Google Sheets only.');
- const id=u.pathname.split('/')[3],url=`https://docs.google.com/spreadsheets/d/${id}/export?format=csv&sheet=${encodeURIComponent(p.sheetName)}`;
+ const id=u.pathname.split('/')[3],url=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(p.sheetName)}`;
  const read=async()=>parseCsv(await inject(tabId,'csv',{url}));
  const rows=await read(),values=p.columns.map(k=>p.values[k]||'');
  if(values.some(v=>/[\t\r\n]/.test(v)||/^[=+@-]/.test(v)))throw Error('Spreadsheet value contains control characters or a possible formula. Review the data.');
@@ -21,7 +21,7 @@ async function appendRow(tabId,p){
  try {
   const cmd=(method,params={})=>chrome.debugger.sendCommand({tabId},method,params);
   const name=`'${p.sheetName.replaceAll("'","''")}'!A${next}`;
-  const focus=await cmd('Runtime.evaluate',{expression:`(()=>{const e=document.querySelector('input.waffle-name-box, #t-name-box input, input[aria-label="Name box"]');if(!e)return false;e.focus();e.select();return true})()`,returnByValue:true});
+  const focus=await cmd('Runtime.evaluate',{expression:`(()=>{const e=document.querySelector('input.waffle-name-box, input#t-name-box, #t-name-box input, input[aria-label="Name box"]');if(!e)return false;e.focus();e.select();return true})()`,returnByValue:true});
   if(!focus.result.value)throw Error('Cannot locate Sheets name box. Open the spreadsheet in editing mode.');
   await cmd('Input.insertText',{text:name});
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});

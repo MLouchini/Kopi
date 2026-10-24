@@ -30,6 +30,19 @@ public sealed class BridgeTests {
         await bridge.Send("step",new{step=new Step("fill",Selector:"#name",Value:"Different Person")},default);
         await bridge.Send("step",new{step=new Step("click",Selector:"#save",VerifySelector:"#success")},default);
         Assert.Equal("Different Person",await page.InputValueAsync("#name"));Assert.True(await page.IsVisibleAsync("#success"));
+        const string sheetUrl="https://docs.google.com/spreadsheets/d/simulated-tracker/edit";
+        await context.GrantPermissionsAsync(["clipboard-read","clipboard-write"],new(){Origin="https://docs.google.com"});
+        await context.RouteAsync("https://docs.google.com/**",async route=>{
+            if(route.Request.Url.Contains("/gviz/tq?")) {
+                var sheetPage=context.Pages.First(p=>p.Url.StartsWith(sheetUrl));
+                var csv=await sheetPage.EvaluateAsync<string>("()=>window.rows.map(r=>r.join(',')).join('\\n')");
+                await route.FulfillAsync(new(){ContentType="text/csv",Body=csv});
+            }else await route.FulfillAsync(new(){ContentType="text/html",Body="<title>Simulated tracker</title><input class='waffle-name-box'><textarea id='cells'></textarea><script>window.rows=[['Name','Location']];document.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('textarea').focus()});document.querySelector('textarea').addEventListener('paste',e=>{e.preventDefault();rows.push(e.clipboardData.getData('text/plain').split('\\t'));});</script>"});
+        });
+        await bridge.Send("step",new{step=new Step("appendRow",sheetUrl),columns=new[]{"name","location"},sheetName="Tracker",values=new Dictionary<string,string>{{"name","Unseen Company"},{"location","Bristol"}}},default);
+        var target=context.Pages.First(p=>p.Url.StartsWith(sheetUrl));
+        Assert.Equal("Unseen Company",await target.EvaluateAsync<string>("()=>rows[1][0]"));
+        Assert.Equal("Bristol",await target.EvaluateAsync<string>("()=>rows[1][1]"));
         await context.CloseAsync();Directory.Delete(profile,true);
     }
 }

@@ -14,4 +14,4 @@
 
 Google Sheets adapter relies on current name-box selectors, clipboard permission and CSV export. It must be validated on a real account. Empty/complex sheets, formulas, filtered or sorted ranges and simultaneous editing need care. No generic repair agent: failures identify the missing target; edit and reapprove the workflow. Read-back is stronger than a click count but a visible success locator can still be chosen poorly. Models do not get permission to create new steps at execution time.
 
-Runtime response grammar is JSON-object constrained, followed by typed deserialization and validation; a full per-workflow JSON schema grammar and a friendlier clarification editor would improve reliability. Sensitive fields are omitted, but non-field page text is not a general-purpose PII detector.
+Runtime response grammar is JSON-object constrained, followed by typed deserialization and validation; discovery also uses a schema grammar, specialised to an observed spreadsheet adapter and destination URL when applicable. Clarifications use the same typed workflow contract. Sensitive fields are omitted, but non-field page text is not a general-purpose PII detector.
