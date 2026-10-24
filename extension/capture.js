@@ -8,6 +8,7 @@ function emit(kind,el,value=''){if(!observing||!el||sensitive(el))return;const l
 chrome.runtime.onMessage.addListener(m=>{if(m.state){const started=!observing&&m.state.observing;observing=m.state.observing;suggestions=m.state.suggestions;if(started&&document.visibilityState==='visible')emit('page',document.body);}});
 document.addEventListener('click',e=>emit('click',e.target.closest('button,a,input,[role=button]')||e.target),true);
 document.addEventListener('change',e=>emit('fill',e.target,e.target.value||''),true);
+const edits=new WeakMap();document.addEventListener('input',e=>{const el=e.target;if(!(el instanceof Element)||!el.isContentEditable&&el.tagName!=='TEXTAREA')return;clearTimeout(edits.get(el));edits.set(el,setTimeout(()=>emit('fill',el,el.value||el.textContent||''),250));},true);
 document.addEventListener('copy',()=>emit('copy',document.activeElement,window.getSelection()?.toString()||''),true);
 document.addEventListener('paste',e=>emit('paste',e.target,e.clipboardData?.getData('text/plain')||''),true);
 setInterval(()=>{if(!observing&&!suggestions)return;if(document.visibilityState!=='visible')return;const key=location.href+'|'+document.title;if(key===lastPage)return;lastPage=key;clearTimeout(timer);timer=setTimeout(()=>chrome.runtime.sendMessage({event:{kind:'page',url:safeUrl(),title:document.title,text:snapshot()}}).catch(()=>{}),700);},1500);

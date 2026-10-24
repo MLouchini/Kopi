@@ -53,7 +53,7 @@ public partial class MainWindow : Window {
     async void StopObserving(object sender, RoutedEventArgs e) {
         bridge.Observing = false; RecordButton.IsEnabled = true; StopButton.IsEnabled = false;
         var trace = recording.ToArray();
-        await Guard(async ct => { await EnsureModel(ct); draft = await ai.Discover(trace,ct); ShowDraft(draft); StatusText.Text = "Discovery complete. Review the proposed workflow."; recording.Clear(); CaptureCount.Text="Recording cleared from memory."; });
+        await Guard(async ct => { await EnsureModel(ct); StatusText.Text="Understanding your demonstration locally…"; draft = await ai.Discover(trace,ct); ShowDraft(draft); StatusText.Text = "Discovery complete. Review the proposed workflow."; recording.Clear(); CaptureCount.Text="Recording cleared from memory."; });
     }
     void ShowDraft(Workflow w) {
         draft = w; NameBox.Text = w.Name; GoalBox.Text = w.Goal; WorkflowJson.Text = Json.Write(w);
@@ -64,7 +64,7 @@ public partial class MainWindow : Window {
     }
     async void ClarifyWorkflow(object sender,RoutedEventArgs e) => await Guard(async ct=>{
         if(draft==null||string.IsNullOrWhiteSpace(ClarificationBox.Text))throw new InvalidOperationException("Enter your correction or answer first.");
-        await EnsureModel(ct); var current=Json.Read<Workflow>(WorkflowJson.Text);current.Name=NameBox.Text;current.Goal=GoalBox.Text;current.Id=draft.Id;
+        await EnsureModel(ct); StatusText.Text="Updating your workflow locally…"; var current=Json.Read<Workflow>(WorkflowJson.Text);current.Name=NameBox.Text;current.Goal=GoalBox.Text;current.Id=draft.Id;
         ShowDraft(await ai.Clarify(current,ClarificationBox.Text,ct));ClarificationBox.Clear();StatusText.Text="Updated proposal. Review it before approval.";
     });
     void SaveWorkflow(object sender,RoutedEventArgs e) {
@@ -83,7 +83,7 @@ public partial class MainWindow : Window {
     async void PreviewRun(object sender,RoutedEventArgs e) => await Guard(async ct=>{
         var w=Selected(); RunButton.IsEnabled=false; previewWorkflow=null;
         await EnsureModel(ct); var page=Json.Read<Evidence>(await bridge.Send("snapshot",new{},ct));
-        var values=await ai.Extract(w,page,ct); ValuesJson.Text=Json.Write(values); ValuesGrid.ItemsSource=w.Variables.Select(v=>new RunValue{Name=v.Name,Value=values.GetValueOrDefault(v.Name,""),Required=v.Required}).ToList(); previewWorkflow=w;
+        StatusText.Text="Extracting new values locally…"; var values=await ai.Extract(w,page,ct); ValuesJson.Text=Json.Write(values); ValuesGrid.ItemsSource=w.Variables.Select(v=>new RunValue{Name=v.Name,Value=values.GetValueOrDefault(v.Name,""),Required=v.Required}).ToList(); previewWorkflow=w;
         RunDestination.Text="You are approving: "+w.Goal+"\nDestination(s): "+string.Join(", ",w.Steps.Where(s=>s.Url.Length>0).Select(s=>s.Url));
         RunButton.IsEnabled=true; StatusText.Text="Review the extracted values, then approve this run.";
     });

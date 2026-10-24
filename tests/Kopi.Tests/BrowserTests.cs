@@ -17,10 +17,11 @@ public sealed class BrowserTests {
         using var pw=await Playwright.CreateAsync();await using var browser=await pw.Chromium.LaunchAsync(new(){Headless=true,ExecutablePath=Environment.GetEnvironmentVariable("KOPI_CHROMIUM")});var page=await browser.NewPageAsync();
         await page.RouteAsync("http://example.test/**", route=>route.FulfillAsync(new(){Body="<html></html>",ContentType="text/html"}));
         await page.GotoAsync("http://example.test");
-        await page.SetContentAsync("<label for='name'>Name</label><input id='name'><input id='secret' type='password'>");
+        await page.SetContentAsync("<label for='name'>Name</label><input id='name'><input id='secret' type='password'><div id='editor' contenteditable='true'></div>");
         await page.EvaluateAsync("()=>{window.recorded=[];window.chrome={runtime:{onMessage:{addListener:f=>window.receive=f},sendMessage:m=>{recorded.push(m.event);return Promise.resolve();}}};}");
         await page.AddScriptTagAsync(new(){Path=Path.Combine(Root,"extension/capture.js")});await page.EvaluateAsync("()=>receive({state:{observing:true,suggestions:false}})");
         await page.FillAsync("#name","New Person");await page.Locator("#name").BlurAsync();await page.FillAsync("#secret","NEVER_CAPTURE");await page.Locator("#secret").BlurAsync();
-        var events=await page.EvaluateAsync<string>("()=>JSON.stringify(recorded)");Assert.Contains("New Person",events);Assert.DoesNotContain("NEVER_CAPTURE",events);
+        await page.Locator("#editor").FillAsync("Edited cell content");await page.WaitForTimeoutAsync(350);
+        var events=await page.EvaluateAsync<string>("()=>JSON.stringify(recorded)");Assert.Contains("Edited cell content",events);Assert.Contains("New Person",events);Assert.DoesNotContain("NEVER_CAPTURE",events);
     }
 }
