@@ -57,4 +57,6 @@ jobs:
             artifacts/Kopi-Setup.exe
             artifacts/SHA256SUMS.txt
             artifacts/ui-smoke.png
-          generate_release_notes: true
+          name: Kopi ${{ github.ref_name }} — Windows preview
+          body_path: docs/release-notes.md
+          generate_release_notes: false

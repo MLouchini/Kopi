@@ -21,6 +21,8 @@ public sealed class RealModelTests {
             Assert.Contains(values.Values,v=>v.Contains("Nova Robotics"));Assert.Contains(values.Values,v=>v.Contains("Research Intern"));Assert.Contains(values.Values,v=>v.Contains("Bristol"));Assert.DoesNotContain(values.Values,v=>v.Contains("Acme")||v.Contains("25,000"));
             await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-values-"+new Uri(page.Url).Host+".json"),Json.Write(values));
         }
-        await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-timing.txt"),$"Discovery + two unseen-layout extractions: {watch.Elapsed.TotalSeconds:F1} seconds. Cloud CPU, not laptop benchmark.");
+        Assert.True(await ai.Relevant(w,new Evidence("page","https://jobs.new.test/role/9","Hiring","Nova Robotics is hiring a Research Intern in Bristol. Apply at this page."),default));
+        Assert.False(await ai.Relevant(w,new Evidence("page","https://news.test/privacy","Privacy policy","This page describes website cookies, retention policies and data protection contacts."),default));
+        await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-timing.txt"),$"Discovery + two unseen-layout extractions + positive/negative trigger recognition: {watch.Elapsed.TotalSeconds:F1} seconds. Cloud CPU, not laptop benchmark.");
     }
 }
