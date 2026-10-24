@@ -29,10 +29,13 @@ public sealed class Intelligence(ILocalModel model) {
         if (clean.Count == 0) throw new InvalidDataException("No browser activity recorded. Connect the extension first.");
         // Keep bounded evidence from both ends; do not silently discard the destination.
         if (clean.Count > 36) clean = clean.Take(18).Concat(clean.TakeLast(18)).ToList();
-        var result = Json.Write(clean);
+        var compact=new JsonSerializerOptions(Json.Options){WriteIndented=false};
+        var contexts=new HashSet<string>();clean=clean.Select(e=>e.Context.Length>0&&!contexts.Add(e.Context)?e with{Context=""}:e).ToList();
+        var result = JsonSerializer.Serialize(clean,compact);
         if (result.Length > 14000) {
-            clean = clean.Select(x => x with { Text = Privacy.Limit(x.Text, 200), Value = Privacy.Limit(x.Value, 300) }).ToList();
-            result = Json.Write(clean);
+            clean = clean.Select(x => x with { Text = Privacy.Limit(x.Text, 200), Value = Privacy.Limit(x.Value, 300), Context=Privacy.Limit(x.Context,1200) }).ToList();
+            result = JsonSerializer.Serialize(clean,compact);
+            if(result.Length>16000){clean=(clean.Count>12?clean.Take(6).Concat(clean.TakeLast(6)):clean).Select(e=>e with{Context=Privacy.Limit(e.Context,800)}).ToList();result=JsonSerializer.Serialize(clean,compact);}
         }
         if (result.Length > 16000) throw new InvalidDataException("Recording is too large. Demonstrate a shorter workflow.");
         return result;

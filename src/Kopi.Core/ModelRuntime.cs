@@ -31,7 +31,7 @@ public sealed class ModelRuntime(LocalStore store) : IDisposable {
     public async Task Start(IProgress<string> progress, CancellationToken ct) {
         if (process is { HasExited: false }) {
             using var probe=new HttpClient{Timeout=TimeSpan.FromSeconds(3)};probe.DefaultRequestHeaders.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",ApiKey);
-            try{using var health=await probe.GetAsync("http://127.0.0.1:47654/health",ct);if(health.IsSuccessStatusCode)return;}catch(HttpRequestException){}
+            try{using var health=await probe.GetAsync("http://127.0.0.1:47654/health",ct);if(health.IsSuccessStatusCode)return;}catch(HttpRequestException){}catch(TaskCanceledException) when(!ct.IsCancellationRequested){}
             Stop();
         }
         var exe = Directory.Exists(store.PathFor("runtime")) ? Directory.GetFiles(store.PathFor("runtime"), "llama-server.exe", SearchOption.AllDirectories).FirstOrDefault() : null;
@@ -53,6 +53,6 @@ public sealed class ModelRuntime(LocalStore store) : IDisposable {
         throw new TimeoutException("Model loading exceeded three minutes. Check available RAM and retry.");
         }catch{Stop();throw;}
     }
-    public void Stop() { if (process is { HasExited: false }) process.Kill(true);process?.Dispose();process=null; }
+    public void Stop() { if (process is { HasExited: false }) { process.Kill(true);if(!process.WaitForExit(5000))throw new IOException("Local model did not stop in time; close Kopi before reinstalling."); }process?.Dispose();process=null; }
     public void Dispose() => Stop();
 }

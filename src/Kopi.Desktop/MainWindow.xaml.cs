@@ -65,7 +65,7 @@ public partial class MainWindow : Window {
         draft = w; AutoRunToggle.IsEnabled=w.IsFreshTransfer;AutoRunToggle.IsChecked=w.AutoRun; NameBox.Text = w.Name; GoalBox.Text = w.Goal; WorkflowJson.Text = Json.Write(w);
         ReviewSummary.Text = "Review what Kopi inferred. Correct uncertain details before approving.";
         QuestionsText.Text = w.Questions.Length > 0 ? "Needs clarification: " + string.Join(" · ",w.Questions) : "No open clarification questions. Check the destination and success conditions.";
-        StepsText.Text = (w.IsFreshTransfer?"Fresh transfer: "+Json.Write(w.Steps[0].Transfer)+"\n\n":"")+string.Join("\n",w.Steps.Select((s,i)=>$"{i+1}. {s.Kind}  {s.Url} {s.Selector}")) + "\n\nInputs:\n" + string.Join("\n",w.Variables.Select(v=>$"{v.Name}: {v.Description}{(v.Required ? " (required)" : " (optional)")}"));
+        StepsText.Text = (w.IsFreshTransfer?$"From: {w.Steps[0].Transfer!.SourceIdentity} ({w.Steps[0].Transfer!.SourceUrl})\nFor: {w.Steps[0].Transfer!.DestinationIdentity} ({w.Steps[0].Url})\nRequests a fresh {w.Steps[0].Transfer!.Digits}-digit code, waits up to {w.Steps[0].Transfer!.WaitSeconds} seconds, then verifies the result. No code is saved.\n\n":"")+string.Join("\n",w.Steps.Select((s,i)=>$"{i+1}. {s.Kind}  {s.Url} {s.Selector}")) + "\n\nInputs:\n" + string.Join("\n",w.Variables.Select(v=>$"{v.Name}: {v.Description}{(v.Required ? " (required)" : " (optional)")}"));
         Tabs.SelectedIndex = 1;
     }
     async void ClarifyWorkflow(object sender,RoutedEventArgs e) => await Guard(async ct=>{

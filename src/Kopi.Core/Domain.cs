@@ -38,6 +38,7 @@ public sealed class Workflow {
             foreach (Match m in Regex.Matches(s.Value, @"\{\{(\w+)\}\}")) if (!Variables.Any(v => v.Name == m.Groups[1].Value)) throw new InvalidDataException("Unknown variable in step.");
             if(s.Kind=="transferFresh") {
                 var t=s.Transfer??throw new InvalidDataException("Fresh transfer needs an observed source and challenge binding.");SafeUrl(t.SourceUrl);
+                if(s.VerifySelector==s.Selector||s.VerifySelector==t.SubmitSelector||s.VerifySelector==t.RequestSelector||t.DestinationGuardSelector==s.Selector||t.SourceSelector==t.SourceGuardSelector)throw new InvalidDataException("Identity and success guards must be independent of the input, message values and submit/request buttons.");
                 if(Steps.Count!=1||Variables.Count!=0||s.Value.Length>0||string.IsNullOrWhiteSpace(s.Selector)||string.IsNullOrWhiteSpace(s.VerifySelector)||string.IsNullOrWhiteSpace(t.SourceSelector)||string.IsNullOrWhiteSpace(t.SourceGuardSelector)||string.IsNullOrWhiteSpace(t.SourceIdentity)||string.IsNullOrWhiteSpace(t.DestinationGuardSelector)||string.IsNullOrWhiteSpace(t.DestinationIdentity)||string.IsNullOrWhiteSpace(t.RequestSelector)||string.IsNullOrWhiteSpace(t.SubmitSelector)||!Regex.IsMatch(t.TimestampAttribute,"^[a-zA-Z][a-zA-Z0-9_-]{0,50}$")||!new[]{"iso","unixSeconds","unixMilliseconds","dmy","mdy"}.Contains(t.TimestampFormat)||t.Digits is <4 or >8||t.WaitSeconds is <5 or >40)throw new InvalidDataException("Fresh transfer requires one complete, scoped rule with a fresh-code request, source identity, destination identity and success check; no saved code values.");
             }
             if (s.Kind == "appendRow" && (Columns.Length == 0 || Columns.Any(c => !Variables.Any(v => v.Name == c)) || string.IsNullOrWhiteSpace(SheetName))) throw new InvalidDataException("Review spreadsheet column order and tab name.");
@@ -50,14 +51,21 @@ public sealed class Workflow {
     }
 }
 public static class Privacy {
+    public static string CompactContext(string context) {
+        try {
+            using var doc=JsonDocument.Parse(context);
+            if(doc.RootElement.ValueKind==JsonValueKind.Array){var nodes=doc.RootElement.EnumerateArray().ToArray();if(nodes.Length>24)nodes=nodes.Take(16).Concat(nodes.TakeLast(8)).ToArray();return JsonSerializer.Serialize(nodes);}
+        }catch(JsonException){}
+        return Limit(context,4000);
+    }
     public static string RedactText(string text,string context="") => Regex.IsMatch(context+" "+text,@"verification|security\s*code|one[ -]?time|two[ -]?factor|authenticat|sign[ -]?in\s*code|\b2fa\b",RegexOptions.IgnoreCase)?Regex.Replace(text,@"\b\d{4,8}\b","[temporary code omitted]"):text;
     public static Evidence Sanitize(Evidence e) {
         var u = Workflow.SafeUrl(e.Url);
         var safeUrl = u.GetLeftPart(UriPartial.Path); // query/fragment may contain tokens
         var verification=Regex.IsMatch(e.FieldType+" "+e.Label+" "+e.Selector,"one-time-code|verification|otp|otc",RegexOptions.IgnoreCase);
-        if(verification)return e with {Url=safeUrl,Title=RedactText(e.Title,e.Text),Text=RedactText(e.Text,e.Title),Label=RedactText(e.Label,e.Title+" "+e.Text),Context=RedactText(Limit(e.Context,4000),e.Title+" "+e.Text),Value=Regex.IsMatch(e.Value,@"^\[[4-8]-digit temporary value omitted\]$")?e.Value:"[temporary value omitted]",FieldType="one-time-code"};
+        if(verification)return e with {Url=safeUrl,Title=RedactText(e.Title,e.Text),Text=RedactText(e.Text,e.Title),Label=RedactText(e.Label,e.Title+" "+e.Text),Context=RedactText(CompactContext(e.Context),e.Title+" "+e.Text),Value=Regex.IsMatch(e.Value,@"^\[[4-8]-digit temporary value omitted\]$")?e.Value:"[temporary value omitted]",FieldType="one-time-code"};
         if (Regex.IsMatch(e.FieldType + " " + e.Label + " " + e.Selector, "password|secret|token|credit.?card|cc-number|one.?time|otp|cvc|cvv", RegexOptions.IgnoreCase)) return e with { Url = safeUrl, Text = "", Value = "", Label = "[sensitive field omitted]", Selector = "" };
-        return e with { Url = safeUrl, Title = RedactText(Limit(e.Title, 200),e.Text), Text = RedactText(Limit(e.Text, 4000),e.Title), Value = Regex.IsMatch(e.Value,@"^\d{4,8}$")&&e.Kind is "copy" or "paste"?"[temporary value omitted]":RedactText(Limit(e.Value, 2000),e.Title+" "+e.Label+" "+e.Text), Label = RedactText(Limit(e.Label, 200),e.Title+" "+e.Text), Selector = Limit(e.Selector, 400), Context=RedactText(Limit(e.Context,4000),e.Title+" "+e.Text) };
+        return e with { Url = safeUrl, Title = RedactText(Limit(e.Title, 200),e.Text), Text = RedactText(Limit(e.Text, 4000),e.Title), Value = Regex.IsMatch(e.Value,@"^\d{4,8}$")&&e.Kind is "copy" or "paste"?"[temporary value omitted]":RedactText(Limit(e.Value, 2000),e.Title+" "+e.Label+" "+e.Text), Label = RedactText(Limit(e.Label, 200),e.Title+" "+e.Text), Selector = Limit(e.Selector, 400), Context=RedactText(CompactContext(e.Context),e.Title+" "+e.Text) };
     }
     public static string Limit(string s, int length) => s.Length <= length ? s : s[..length];
 }

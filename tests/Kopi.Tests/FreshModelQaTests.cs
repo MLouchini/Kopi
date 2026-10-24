@@ -4,13 +4,13 @@ namespace Kopi.Tests;
 public sealed class FreshModelQaTests {
     public const string Portal="https://portal.test/verify", Inbox="https://messages.test/inbox";
     public static Evidence[] Demonstration=>[
-        new("page",Portal,"Verify identity","Example University. Request a new verification code, then enter it here.",Context:"[{\"selector\":\"#organisation\",\"label\":\"Example University\"},{\"selector\":\"#otp\",\"label\":\"Verification code\",\"type\":\"one-time-code\"},{\"selector\":\"#resend\",\"label\":\"Send a new code\"},{\"selector\":\"#submit\",\"label\":\"Verify\"}]"),
+        new("page",Portal,"Verify identity","Example University. Request a new verification code, then enter it here.",Context:"[{\"selector\":\"#organisation\",\"tag\":\"h1\",\"label\":\"Example University\"},{\"selector\":\"#otp\",\"tag\":\"input\",\"label\":\"Verification code\",\"type\":\"one-time-code\"},{\"selector\":\"#resend\",\"tag\":\"button\",\"label\":\"Send a new code\"},{\"selector\":\"#submit\",\"tag\":\"button\",\"label\":\"Verify\"}]"),
         new("click",Portal,"Verify identity",Label:"Send a new code",Selector:"#resend"),
-        new("page",Inbox,"Messages","University Identity Service. A new sign-in code arrived.",Context:"[{\"selector\":\"#sender\",\"label\":\"University Identity Service\"},{\"selector\":\"#message-1\",\"classes\":\"message\",\"label\":\"Use this one-time code: [temporary code omitted]\",\"timestamps\":{\"data-time\":\"2026-10-24T12:00:01Z\"}},{\"selector\":\"main\",\"classes\":\"conversation\"}]"),
+        new("page",Inbox,"Messages","University Identity Service. A new sign-in code arrived.",Context:"[{\"selector\":\"#sender\",\"tag\":\"h1\",\"label\":\"University Identity Service\"},{\"selector\":\"#message-1\",\"classes\":\"message\",\"label\":\"Use this one-time code: [temporary code omitted]\",\"timestamps\":{\"data-time\":\"2026-10-24T12:00:01Z\"}},{\"selector\":\"main\",\"classes\":\"conversation\"}]"),
         new("copy",Inbox,"Messages",Label:"Use this one-time code",Selector:"#message-1",Value:"[temporary value omitted]",Context:"Messages with class message and data-time ISO timestamps are inside main; sender label #sender is University Identity Service."),
         new("fill",Portal,"Verify identity",Label:"Verification code",Selector:"#otp",Value:"[6-digit temporary value omitted]",FieldType:"one-time-code"),
         new("click",Portal,"Verify identity",Label:"Verify",Selector:"#submit"),
-        new("page",Portal,"Signed in","Example University. Welcome to your account.",Context:"[{\"selector\":\"#success\",\"label\":\"Welcome to your account\"}]")
+        new("page",Portal,"Signed in","Example University. Welcome to your account.",Context:"[{\"selector\":\"#success\",\"tag\":\"h2\",\"label\":\"Welcome to your account\"}]")
     ];
     [LocalModelFact]public async Task LearnsTransientTransferFromDemonstration()=>await Learn(new LlamaModel(),Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath());
     public static async Task<Workflow> Learn(ILocalModel model,string reportDir) {
