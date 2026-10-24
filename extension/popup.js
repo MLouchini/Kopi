@@ -1,0 +1,1 @@
+document.querySelector('#pair').onclick=async()=>{const r=await chrome.runtime.sendMessage({pair:document.querySelector('#code').value.trim()});document.querySelector('#status').textContent=r.error||'Connected. You can return to Kopi.';};

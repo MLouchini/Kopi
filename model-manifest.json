@@ -1,0 +1,13 @@
+{
+  "modelName": "Gemma 4 E2B IT QAT Q4_0 (Google)",
+  "runtime": {
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11852/llama-b11852-bin-win-cpu-x64.zip",
+    "sha256": "89d28c3d7d810a57524f4c9b13397b2485cbe32937fb302c09c1b04d2a6b3e06",
+    "fileName": "llama-b11852-bin-win-cpu-x64.zip"
+  },
+  "model": {
+    "url": "https://huggingface.co/google/gemma-4-E2B-it-qat-q4_0-gguf/resolve/675cff42a74c774d6cb76f76d8eacb49b48c9b93/gemma-4-E2B_q4_0-it.gguf",
+    "sha256": "fa401b55b07ee70a54c6dae3903c783a6e65064312529ea57175cb5f8dec6634",
+    "fileName": "gemma-4-E2B_q4_0-it.gguf"
+  }
+}

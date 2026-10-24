@@ -1,0 +1,57 @@
+name: Windows build and QA
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Kopi.sln
+      - run: dotnet build Kopi.sln --no-restore -c Release
+      - name: Install test browser
+        run: pwsh tests/Kopi.Tests/bin/Release/net10.0/playwright.ps1 install chromium
+      - name: Functional tests
+        run: dotnet test tests/Kopi.Tests --no-build -c Release --logger "trx;LogFileName=windows.trx"
+      - name: Publish self-contained Windows application
+        run: dotnet publish src/Kopi.Desktop -c Release -r win-x64 --self-contained true -o artifacts/app -p:PublishReadyToRun=true
+      - name: UI smoke pass
+        run: ./scripts/ui-smoke.ps1 -ExePath "$PWD/artifacts/app/Kopi.exe"
+      - name: Package ZIP
+        run: Compress-Archive artifacts/app/* artifacts/Kopi-win-x64.zip
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup --yes --no-progress }
+          & $iscc scripts/installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-FileHash artifacts/Kopi-win-x64.zip,artifacts/Kopi-Setup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Kopi-Windows
+          path: |
+            artifacts/Kopi-win-x64.zip
+            artifacts/Kopi-Setup.exe
+            artifacts/SHA256SUMS.txt
+            artifacts/ui-smoke.png
+            **/TestResults/*.trx
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            artifacts/Kopi-win-x64.zip
+            artifacts/Kopi-Setup.exe
+            artifacts/SHA256SUMS.txt
+          generate_release_notes: true
