@@ -88,10 +88,10 @@ def build():
         return s
 
     s = new('Kopi', '00:00–00:15 / 15 seconds',
-        'Kopi is a local AI assistant that learns a supported browser task from a demonstration. The idea started with something I kept doing myself: logging into university and going through verification every day.',
+        'Kopi is designed to handle repeated browser work in the background. The idea started with something I kept doing myself: logging into university and going through verification every day. Once a supported verification workflow is learned and enabled, Kopi can recognise a matching challenge and execute it automatically.',
         ['Origin story supplied by the user in this chat.', REPO+'/blob/main/README.md', 'Brand assets: site/assets. Palette: site/style.css.'])
     s.image('kopi-wordmark.png', 48, 154, 640, 240)
-    s.text('A local AI assistant that learns\nbrowser tasks from a demonstration', 72, 454, 690, 132, 34)
+    s.text('A local AI assistant that handles\nbrowser routines in the background', 72, 454, 690, 132, 34)
     s.image('kopi-logo.png', 770, 168, 440, 440)
 
     s = new('The problem', '00:15–00:55 / 40 seconds',
@@ -105,35 +105,35 @@ def build():
         s.text(title, x, 574, 350, 60, 29, INK, True)
 
     s = new('The idea', '00:55–01:35 / 40 seconds',
-        'My first thought was to automate that login routine. But a script written for one university page would only solve that one case. The more useful idea was to let the user show a task, then use AI to understand which steps stay the same and which information changes. The login was the starting point. Kopi became a way to teach other supported browser routines through a demonstration.',
+        'My first thought was to automate that login routine. But a script written for one university page would only solve that one case. The wider idea was a local assistant that recognises repeated browser work and handles it in the background. It should understand which steps stay the same and which information changes, so I can carry on with my day. Current automatic execution covers explicitly enabled learned verification workflows. Broader background learning and automation remain the product direction.',
         ['User-provided motivation.', REPO+'/blob/main/README.md', REPO+'/blob/main/src/Kopi.Core/Intelligence.cs'])
     s.heading('The idea', 3)
     s.shape(64, 258, 9, 229, ORANGE)
-    s.text('What if I could show my browser\na task once, and teach it\nto repeat the routine?', 102, 247, 1090, 241, 49, INK, True)
+    s.text('What if my computer recognised\nthe routine and handled it\nwhile I carried on?', 102, 247, 1090, 241, 49, INK, True)
     s.text('Start with my university login.\nMake the same approach reusable for other browser tasks.', 102, 552, 1090, 105, 29, MUTED)
 
     s = new('What Kopi actually does', '01:35–02:15 / 40 seconds',
-        'I start recording and complete a browser task. The extension captures selected actions and bounded page evidence. Gemma uses that demonstration to propose a workflow, identify changing inputs and ask about missing details. I review the proposal, answer questions and save it. Kopi can then use the saved workflow on a supported new page or challenge with fresh inputs. Normal workflows ask for run approval. For the supported fresh-code workflow, I can explicitly enable automatic execution once. A demonstration starts the process, but review is still part of it.',
+        'Kopi stays running with the paired browser extension. With page monitoring enabled, it receives page context and uses local Gemma to match that context to an approved learned workflow. When I reach a matching new verification challenge, Kopi runs the enabled workflow automatically, transfers a fresh code and checks the result. I do not have to open the app, start a recording or approve every repeat. Setup and enablement happen beforehand. Current automatic execution is scoped to supported fresh-value workflows. Ordinary workflows still require approval, and fully passive learning of arbitrary routines is not implemented.',
         [REPO+'/blob/main/HANDOFF.md', REPO+'/blob/main/docs/verification-workflows.md'])
     s.heading('What Kopi actually does', 4)
     for y, num, title, body in [
-        (220,'01','Observe','Record a task in the browser I already use.'),
-        (329,'02','Learn','Gemma identifies the steps and changing inputs.'),
-        (438,'03','Review','Resolve missing details and save the workflow.'),
-        (547,'04','Repeat','Run the saved routine with fresh information.')]:
+        (220,'01','Watch','Notice page context while Kopi runs in the background.'),
+        (329,'02','Recognise','Match the current task to a learned routine with Gemma.'),
+        (438,'03','Act','Run an enabled verification workflow automatically.'),
+        (547,'04','Check','Confirm the result and stop if anything is uncertain.')]:
         s.text(num, 64, y, 84, 60, 40, ORANGE)
         s.text(title, 175, y+4, 225, 58, 32, INK, True)
         s.text(body, 440, y+8, 776, 77, 28)
         s.rule(64, y+89)
 
     s = new('The university login example', '02:15–02:55 / 40 seconds',
-        'This is the workflow I want Kopi to take over after I teach and enable it. A new university challenge requests a new code. Kopi looks in the demonstrated messaging conversation for a new matching message, transfers the code, submits it and checks for a separate success state. The code changes each time, so copying the old demonstrated value would be wrong. The implementation therefore checks freshness, source identity and destination identity, and stops if the new message is stale, missing or ambiguous. The browser tests exercise this flow on test pages. Real WhatsApp and university accounts still need validation.',
+        'After initial setup and enablement, reaching a matching new university challenge is the trigger. Kopi detects the page context in the background, requests a fresh code, finds the new matching message in the approved conversation, transfers the code, submits it and checks for a separate success state. No new recording or per-run approval is needed for this enabled workflow. The implementation checks freshness, source identity and destination identity, and stops if the new message is stale, missing or ambiguous. Browser tests exercise this flow on test pages. Real WhatsApp and university accounts still need validation.',
         [REPO+'/blob/main/extension/fresh.js', REPO+'/blob/main/src/Kopi.Core/FreshCompiler.cs', REPO+'/blob/main/HANDOFF.md'])
     s.heading('The university login example', 5)
     for x, num, title, body in [
-        (64,'01','Request','A new challenge asks\nfor a fresh code.'),
-        (461,'02','Read','Find the new code in\nthe correct conversation.'),
-        (858,'03','Verify','Enter it, submit and\ncheck the result.')]:
+        (64,'01','Detect','Recognise a matching\nnew sign-in challenge.'),
+        (461,'02','Fetch','Request a code and read\nthe new matching message.'),
+        (858,'03','Verify','Fill, submit and check\nthe result automatically.')]:
         s.shape(x, 232, 350, 7, ORANGE)
         s.text(num, x, 282, 350, 100, 76, ORANGE)
         s.text(title, x, 418, 350, 70, 39, INK, True)
@@ -153,12 +153,12 @@ def build():
             s.rule(64, y+120)
 
     s = new('How I built it', '03:45–04:30 / 45 seconds',
-        'The browser extension is JavaScript and handles recording plus browser actions. The desktop is C# with .NET 10 and WPF. An authenticated Kestrel loopback bridge connects it to the extension. The open-weight model is Google Gemma 4 E2B IT QAT Q4_0, running locally with llama.cpp on the CPU. It is an important part of the product: it interprets a demonstration, extracts changing values, resolves questions and matches task context. My application code supplies the recorder, prompts and workflow contracts, the compiler that binds observed controls, the fresh-code coordinator and the model runtime manager. Model weights and llama.cpp are upstream dependencies. This product uses local inference, not the Gemini API.',
+        'The JavaScript browser extension monitors page context and performs browser actions. The desktop is C# with .NET 10 and WPF. An authenticated Kestrel loopback bridge connects it to the extension. The open-weight model is Google Gemma 4 E2B IT QAT Q4_0, running locally with llama.cpp on the CPU. It interprets task evidence, extracts changing values, resolves questions and matches the current page to a learned workflow. My application code supplies the observation adapter, workflow contracts and compiler, page-trigger matching, fresh-code coordinator and runtime manager. Model weights and llama.cpp are upstream dependencies. This product uses local inference rather than the Gemini API.',
         [REPO+'/blob/main/model-manifest.json', MODEL, REPO+'/blob/main/src/Kopi.Core/Intelligence.cs', REPO+'/blob/main/src/Kopi.Core/ModelRuntime.cs', REPO+'/blob/main/src/Kopi.Core/FreshCompiler.cs', REPO+'/blob/main/docs/architecture.md'])
     s.heading('How I built it', 7)
     for x, bg, title, body in [
-        (64,PEACH,'Browser extension','JavaScript\nRecords and acts'),
-        (471,'F4EDE5','Desktop app','C# / .NET 10 / WPF\nReviews and validates'),
+        (64,PEACH,'Browser extension','JavaScript\nMonitors and acts'),
+        (471,'F4EDE5','Desktop app','C# / .NET 10 / WPF\nCoordinates and validates'),
         (878,INK,'Local model','Gemma 4 E2B\nllama.cpp / CPU')]:
         s.shape(x, 234, 338, 177, bg)
         fg = PAPER if bg == INK else INK
@@ -166,17 +166,17 @@ def build():
         s.text(body, x+22, 329, 294, 72, 23, fg)
     s.shape(414, 320, 45, 3, ORANGE)
     s.shape(821, 320, 45, 3, ORANGE)
-    s.text('Gemma understands the demonstration\nand separates fixed steps from new inputs.', 64, 463, 1152, 105, 33, INK, True)
-    s.text('I built the recorder, workflow compiler, code-transfer logic and runtime manager.', 64, 606, 1152, 72, 27)
+    s.text('Gemma recognises the task context\nand matches it to a learned workflow.', 64, 463, 1152, 105, 33, INK, True)
+    s.text('I built the page triggers, workflow compiler, code-transfer logic and runtime manager.', 64, 606, 1152, 72, 27)
 
     s = new('What works and what comes next', '04:30–05:00 / 30 seconds',
-        'The current implementation includes task recording, workflow review, local Gemma learning and saved workflow execution for supported actions. Fresh-code checks have browser-fixture coverage. That gives the idea a concrete implementation, but it does not establish real WhatsApp or university compatibility. The next steps are a complete acceptance run on those live accounts and the actual laptop, plus fixing the expanded saved-rule model QA failure. The original goal stays simple: spend less effort manually repeating a browser routine I already know. The repository contains the implementation and its tests. No time-saving or adoption metrics have been measured.',
+        'The current implementation includes page monitoring, local task matching and automatic execution of explicitly enabled learned verification workflows. Fresh-code checks have browser-fixture coverage. General background learning and automation remain the wider goal, rather than a completed capability for arbitrary browser work. Next comes real university and WhatsApp account testing, performance measurement on the actual laptop and resolving the remaining expanded workflow QA issues. The aim is to let Kopi handle routine work while I carry on. No time-saving or adoption metrics have been measured.',
         [REPO, REPO+'/blob/main/HANDOFF.md', REPO+'/blob/main/docs/qa.md', REPO+'/actions/runs/40097950425'])
     s.heading('What works and what comes next', 8)
     s.text('Implemented', 64, 237, 540, 60, 35, INK, True)
-    s.text('Task recording and workflow review\nLearning with local Gemma\nSaved workflow execution\nFresh-code checks on test pages', 64, 330, 540, 255, 28)
+    s.text('Page monitoring and local matching\nAutomatic enabled verification runs\nLocal Gemma task understanding\nFresh-code checks on test pages', 64, 330, 540, 255, 28)
     s.text('Next', 674, 237, 542, 60, 35, INK, True)
-    s.text('Test real university and WhatsApp flows\nMeasure performance on my laptop\nFix remaining end-to-end QA issues', 674, 330, 542, 255, 28)
+    s.text('Broaden background learning and automation\nTest real university and WhatsApp flows\nMeasure performance on my laptop\nFix remaining end-to-end QA issues', 674, 330, 542, 255, 28)
     s.rule(64, 615)
     s.text('github.com/MLouchini/Kopi', 64, 644, 1152, 42, 25, ORANGE, True)
     return slides
