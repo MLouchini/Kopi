@@ -40,8 +40,8 @@ public sealed class BridgeTests {
                 await route.FulfillAsync(new(){ContentType="text/csv",Body=csv});
             }else await route.FulfillAsync(new(){ContentType="text/html",Body="<title>Simulated tracker</title><input class='waffle-name-box'><textarea id='cells'></textarea><script>window.rows=[['Name','Location']];document.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('textarea').focus()});document.querySelector('textarea').addEventListener('paste',e=>{e.preventDefault();rows.push(e.clipboardData.getData('text/plain').split('\\t'));fetch('/update',{method:'POST',body:JSON.stringify(rows)});});</script>"});
         });
+        var target=await context.NewPageAsync();await target.GotoAsync(sheetUrl);
         await bridge.Send("step",new{step=new Step("appendRow",sheetUrl),columns=new[]{"name","location"},sheetName="Tracker",values=new Dictionary<string,string>{{"name","Unseen Company"},{"location","Bristol"}}},default);
-        var target=context.Pages.First(p=>p.Url.StartsWith(sheetUrl));
         Assert.Equal("Unseen Company",await target.EvaluateAsync<string>("()=>rows[1][0]"));
         Assert.Equal("Bristol",await target.EvaluateAsync<string>("()=>rows[1][1]"));
         await context.CloseAsync();Directory.Delete(profile,true);
