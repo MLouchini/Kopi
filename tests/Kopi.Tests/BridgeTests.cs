@@ -32,12 +32,13 @@ public sealed class BridgeTests {
         Assert.Equal("Different Person",await page.InputValueAsync("#name"));Assert.True(await page.IsVisibleAsync("#success"));
         const string sheetUrl="https://docs.google.com/spreadsheets/d/simulated-tracker/edit";
         await context.GrantPermissionsAsync(["clipboard-read","clipboard-write"],new(){Origin="https://docs.google.com"});
+        List<string[]> sheetRows=[["Name","Location"]];
         await context.RouteAsync("https://docs.google.com/**",async route=>{
+            if(route.Request.Url.EndsWith("/update")){sheetRows=Json.Read<List<string[]>>(route.Request.PostData!);await route.FulfillAsync(new(){Body="ok"});return;}
             if(route.Request.Url.Contains("/gviz/tq?")) {
-                var sheetPage=context.Pages.First(p=>p.Url.StartsWith(sheetUrl));
-                var csv=await sheetPage.EvaluateAsync<string>("()=>window.rows.map(r=>r.join(',')).join('\\n')");
+                var csv=string.Join("\n",sheetRows.Select(r=>string.Join(",",r)));
                 await route.FulfillAsync(new(){ContentType="text/csv",Body=csv});
-            }else await route.FulfillAsync(new(){ContentType="text/html",Body="<title>Simulated tracker</title><input class='waffle-name-box'><textarea id='cells'></textarea><script>window.rows=[['Name','Location']];document.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('textarea').focus()});document.querySelector('textarea').addEventListener('paste',e=>{e.preventDefault();rows.push(e.clipboardData.getData('text/plain').split('\\t'));});</script>"});
+            }else await route.FulfillAsync(new(){ContentType="text/html",Body="<title>Simulated tracker</title><input class='waffle-name-box'><textarea id='cells'></textarea><script>window.rows=[['Name','Location']];document.querySelector('input').addEventListener('keydown',e=>{if(e.key==='Enter')document.querySelector('textarea').focus()});document.querySelector('textarea').addEventListener('paste',e=>{e.preventDefault();rows.push(e.clipboardData.getData('text/plain').split('\\t'));fetch('/update',{method:'POST',body:JSON.stringify(rows)});});</script>"});
         });
         await bridge.Send("step",new{step=new Step("appendRow",sheetUrl),columns=new[]{"name","location"},sheetName="Tracker",values=new Dictionary<string,string>{{"name","Unseen Company"},{"location","Bristol"}}},default);
         var target=context.Pages.First(p=>p.Url.StartsWith(sheetUrl));

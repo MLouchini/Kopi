@@ -15,7 +15,7 @@ globalThis.KopiBrowser = {
     if (!el.getClientRects().length || el.disabled) throw Error('Target is hidden or disabled');
     el.scrollIntoView({block:'center'});
     if (step.kind === 'fill') {
-      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) throw Error('Target is not a supported text input');
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || el instanceof HTMLInputElement && !['text','email','search','url','tel','number'].includes(el.type)) throw Error('Target is not a supported text input');
       const setter = Object.getOwnPropertyDescriptor(el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,'value').set;
       setter.call(el,step.value); el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true}));
       if (el.value !== step.value) throw Error('Field value verification failed');
