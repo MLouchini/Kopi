@@ -22,6 +22,8 @@ try {
   $pair=$code.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
   if ($pair.Length -ne 24) { throw 'Invalid pairing code.' }
   $bounds=$window.Current.BoundingRectangle
+  $screen=[System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+  if ($bounds.Right -gt $screen.Right+12 -or $bounds.Bottom -gt $screen.Bottom+12) { throw "Window extends beyond usable screen area: $bounds vs $screen" }
   $image=[System.Drawing.Bitmap]::new([int]$bounds.Width,[int]$bounds.Height)
   $graphics=[System.Drawing.Graphics]::FromImage($image)
   $graphics.CopyFromScreen([int]$bounds.X,[int]$bounds.Y,0,0,$image.Size)

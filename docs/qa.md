@@ -34,3 +34,6 @@ A download page and installer workflow do not establish publication. Check the r
 
 - Second full Windows QA run `40090296694`: **success**. Actual extension observation and same-session form execution, simulated Sheets trusted clipboard paste and authenticated CSV read-back, native llama-server startup with bundled CRT DLLs, WPF startup/four-tab navigation, and ZIP/installer packaging all passed. The final tag build reruns these checks before publishing release assets.
 - The simulated spreadsheet test initially failed because extension-created navigation preceded Playwright routing. Preloading the fixture under routing corrected the test; no assertions were disabled. The discovered timeout also prompted bounded reads and a background-worker heartbeat.
+
+- Final screenshot review found the initial fixed window could extend beyond a small monitor. Version 0.1.1 clamps startup dimensions to the Windows work area; CI now checks the window bounds before capturing the WPF screenshot.
+- Actual local-model positive and negative trigger recognition checks also passed: a fresh relevant listing matches, an unrelated privacy-policy page does not.

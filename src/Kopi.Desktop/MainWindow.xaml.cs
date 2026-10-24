@@ -25,7 +25,11 @@ public partial class MainWindow : Window {
     readonly System.Windows.Forms.NotifyIcon tray = new() { Icon = System.Drawing.SystemIcons.Application, Visible = true, Text = "Kopi · local workflow assistant" };
     readonly HashSet<string> suggested = new();
     public MainWindow() {
-        InitializeComponent(); runtime = new(store); model.Authenticate(runtime.ApiKey); ai = new(model);
+        InitializeComponent();
+        var area=SystemParameters.WorkArea;
+        MinWidth=Math.Min(850,Math.Max(300,area.Width-16));MinHeight=Math.Min(650,Math.Max(300,area.Height-16));
+        Width=Math.Min(1120,area.Width-16);Height=Math.Min(860,area.Height-16);Left=area.Left+8;Top=area.Top+8;
+        runtime = new(store); model.Authenticate(runtime.ApiKey); ai = new(model);
         try { workflows = store.Load(); bridge.Start(); } catch (Exception e) { StatusText.Text = e.Message; }
         PairCodeBox.Text = bridge.PairCode; Refresh();
         if(!File.Exists(store.PathFor("model.gguf")))Tabs.SelectedIndex=3;
