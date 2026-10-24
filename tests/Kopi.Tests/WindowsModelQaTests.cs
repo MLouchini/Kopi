@@ -19,6 +19,7 @@ public sealed class WindowsModelQaTests(ITestOutputHelper output) {
         output.WriteLine($"PASS 1: first download/checksum completed in {watch.Elapsed.TotalSeconds:F1}s");
         await runtime.Start(progress,default);
         await RealModelTests.VerifyTracker(model,Path.Combine(store.Root,"pass1"));
+        await FreshBrowserQa.Run(await FreshModelQaTests.Learn(model,Path.Combine(store.Root,"pass1")));
         var process=Process.GetProcessesByName("llama-server").Single();
         output.WriteLine($"Native peak working set={process.PeakWorkingSet64/1048576} MiB; GC available memory budget={GC.GetGCMemoryInfo().TotalAvailableMemoryBytes/1048576} MiB");
         runtime.Stop();
@@ -26,6 +27,7 @@ public sealed class WindowsModelQaTests(ITestOutputHelper output) {
         await runtime.Download(manifest,progress,default);Assert.Equal(stamp,File.GetLastWriteTimeUtc(store.PathFor("model.gguf")));
         await runtime.Start(progress,default);
         await RealModelTests.VerifyTracker(model,Path.Combine(store.Root,"pass2"));
+        await FreshBrowserQa.Run(await FreshModelQaTests.Learn(model,Path.Combine(store.Root,"pass2")));
         output.WriteLine($"PASS 2: verified-cache reinstall, restart and real inference completed in {watch.Elapsed.TotalSeconds:F1}s");
     }
 }

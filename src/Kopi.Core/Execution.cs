@@ -5,12 +5,13 @@ using System.Text.RegularExpressions;
 namespace Kopi.Core;
 public sealed class Executor(IBrowserSession browser, LocalStore store) {
     readonly SemaphoreSlim gate = new(1);
-    public async Task<string> Run(Workflow w, Dictionary<string,string> values, IProgress<string> progress, CancellationToken ct) {
+    public async Task<string> Run(Workflow w, Dictionary<string,string> values, IProgress<string> progress, CancellationToken ct, string instanceId = "") {
         await gate.WaitAsync(ct);
         try {
             w.Validate(); if (!w.Approved) throw new InvalidOperationException("Approve and save this workflow first.");
             foreach (var v in w.Variables) if (v.Required && string.IsNullOrWhiteSpace(values.GetValueOrDefault(v.Name))) throw new InvalidDataException($"Missing {v.Name}");
-            var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(w.Id + Json.Write(values.OrderBy(x => x.Key)))));
+            if(w.IsFreshTransfer&&string.IsNullOrWhiteSpace(instanceId))throw new InvalidOperationException("A fresh-value run must be bound to a current challenge instance.");
+            var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(w.Id + Json.Write(values.OrderBy(x => x.Key))+(w.IsFreshTransfer?instanceId:""))));
             var receipt = store.PathFor(key + ".receipt");
             if (File.Exists(receipt)) throw new InvalidOperationException("This exact run was already attempted. Check its destination before repeating it; Kopi blocks automatic duplicate retries.");
             // Persist before sending any action. A crash or uncertain response must not blindly repeat writes.

@@ -1,9 +1,10 @@
 const base='http://127.0.0.1:47653';
+const pageInstances=new Map();
 let state={observing:false,suggestions:false},busy=false,runTab=null,stage='idle';
 async function api(path,body={},extra={}){const {token}=await chrome.storage.local.get('token');const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(token||''),...extra},body:JSON.stringify(body)});if(!r.ok)throw Error(r.status===401?'Pair Kopi with the desktop app.':`Kopi connection failed (${r.status})`);return r.json();}
 chrome.runtime.onMessage.addListener((m,sender,reply)=>{
  if(m.pair){api('/pair',{}, {'X-Kopi-Pair':m.pair}).then(async r=>{await chrome.storage.local.set({token:r.token});reply({ok:true});}).catch(e=>reply({error:e.message}));return true;}
- if(m.event){if(state.observing||state.suggestions&&m.event.kind==='page')api('/event',m.event).catch(()=>{});}
+ if(m.event){if(sender.tab?.id&&m.event.instanceId){pageInstances.set(m.event.instanceId,sender.tab.id);if(pageInstances.size>1000)pageInstances.delete(pageInstances.keys().next().value);}if(state.observing||state.suggestions&&m.event.kind==='page')api('/event',m.event).catch(()=>{});}
 });
 async function active(){const [tab]=await chrome.tabs.query({active:true,lastFocusedWindow:true});if(!tab?.id||!/^https?:/.test(tab.url))throw Error('Open a normal website tab first.');return tab.id;}
 async function loaded(id){for(let i=0;i<100;i++){const t=await chrome.tabs.get(id);if(t.status==='complete')return;await new Promise(r=>setTimeout(r,100));}throw Error('Page loading timed out.');}
@@ -32,10 +33,33 @@ async function appendRow(tabId,p){
  stage='verifying spreadsheet row';for(let i=0;i<15;i++){await new Promise(r=>setTimeout(r,1000));const after=await read();if(after.some(r=>values.every((v,j)=>r[j]===v)))return {verified:true};}
  throw Error('Could not verify the new row. Check the spreadsheet before retrying.');
 }
+async function freshInvoke(tabId,method,payload){await chrome.scripting.executeScript({target:{tabId},files:['fresh.js']});const [r]=await chrome.scripting.executeScript({target:{tabId},func:async(m,p)=>{try{return {value:await KopiFresh[m](p)};}catch(e){return {error:e.message};}},args:[method,payload]});if(r?.result?.error)throw Error(r.result.error);return r?.result?.value;}
+async function freshTransfer(destinationId,step){
+ const rule=step.transfer;const destination=await chrome.tabs.get(destinationId);const expected=new URL(step.url),actual=new URL(destination.url);
+ if(expected.origin!==actual.origin||expected.pathname!==actual.pathname)throw Error('The approved verification page is not active.');
+ const sourceUrl=new URL(rule.sourceUrl);const tabs=await chrome.tabs.query({});let source=tabs.find(t=>{try{const u=new URL(t.url);return u.origin===sourceUrl.origin&&u.pathname===sourceUrl.pathname;}catch{return false;}});
+ if(!source)source=await chrome.tabs.create({url:rule.sourceUrl,active:true});await loaded(source.id);
+ await chrome.tabs.update(source.id,{active:true});stage='checking approved message source';
+ let matched=false;for(let i=0;i<10;i++){if(await freshInvoke(source.id,'source',{rule})){matched=true;break;}await new Promise(r=>setTimeout(r,300));}if(!matched)throw Error('Open the approved message conversation first.');
+ const old=await freshInvoke(source.id,'candidates',{rule});const seen=new Set(old.map(x=>x.key));
+ const requestedAt=Date.now();await chrome.tabs.update(destinationId,{active:true});const binding=await freshInvoke(destinationId,'request',{step});
+ stage='waiting for a fresh scoped value';const deadline=Date.now()+rule.waitSeconds*1000;let value=null;
+ try {
+  while(Date.now()<deadline){const entries=await freshInvoke(source.id,'candidates',{rule});const earliest=['dmy','mdy'].includes(rule.timestampFormat)?Math.floor(requestedAt/60000)*60000:requestedAt;
+   const fresh=entries.filter(x=>!seen.has(x.key)&&Number.isFinite(x.time)&&x.time>=earliest&&x.time<=Date.now()+5000);
+   if(fresh.some(x=>x.ambiguous)||fresh.filter(x=>x.value).length>1)throw Error('Multiple fresh values match. Automatic transfer stopped.');
+   const one=fresh.find(x=>x.value);if(one){value=one.value;break;}await new Promise(r=>setTimeout(r,500));
+  }
+  if(!value)throw Error('No unambiguous fresh value arrived in time. Nothing was submitted.');
+  stage='completing the approved verification';await chrome.tabs.update(destinationId,{active:true});return await freshInvoke(destinationId,'complete',{step,value,instanceId:binding.instanceId});
+ }finally{value=null;seen.clear();old.length=0;}
+}
 async function execute(c){
  if(c.kind==='snapshot'){runTab=await active();return inject(runTab,'snapshot',{});}
+ if(c.kind==='bind'){runTab=c.payload.instanceId?pageInstances.get(c.payload.instanceId):await active();if(!runTab)throw Error('This observed page is no longer available.');return {bound:true};}
  if(c.kind!=='step')throw Error('Unknown command');
  const p=c.payload,s=p.step;
+ if(s.kind==='transferFresh'){if(!runTab)runTab=await active();return freshTransfer(runTab,s);}
  if(s.kind==='navigate'||s.kind==='appendRow'){stage='opening destination';
   if(!/^https?:\/\//.test(s.url))throw Error('Unsupported URL');
   const tabs=await chrome.tabs.query({});const existing=tabs.find(t=>t.url?.split('#')[0]===s.url.split('#')[0]);

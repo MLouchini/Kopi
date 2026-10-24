@@ -13,6 +13,8 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet build Kopi.sln -c Release
+      - name: Install browser for learned workflow execution
+        run: pwsh tests/Kopi.Tests/bin/Release/net10.0/playwright.ps1 install chromium
       - name: Package native prerequisites in the real test application
         run: ./scripts/package-native.ps1 -PublishDir tests/Kopi.Tests/bin/Release/net10.0
       - name: Two real Windows download, load and inference passes

@@ -22,6 +22,7 @@ public partial class MainWindow : Window {
     Workflow? draft, previewWorkflow;
     CancellationTokenSource? work;
     bool busy;
+    string previewInstance="";
     readonly System.Windows.Forms.NotifyIcon tray = new() { Icon = System.Drawing.SystemIcons.Application, Visible = true, Text = "Kopi · local workflow assistant" };
     readonly HashSet<string> suggested = new();
     public MainWindow() {
@@ -32,6 +33,7 @@ public partial class MainWindow : Window {
         runtime = new(store); model.Authenticate(runtime.ApiKey); ai = new(model);
         try { workflows = store.Load(); bridge.Start(); } catch (Exception e) { StatusText.Text = e.Message; }
         PairCodeBox.Text = bridge.PairCode; Refresh();
+        if(workflows.Any(w=>w.Approved&&w.AutoRun)){SuggestToggle.IsChecked=true;bridge.Suggestions=true;}
         if(!File.Exists(store.PathFor("model.gguf")))Tabs.SelectedIndex=3;
         bridge.Received += e => Dispatcher.InvokeAsync(() => OnEvidence(e));
         tray.DoubleClick += (_,_) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
@@ -60,10 +62,10 @@ public partial class MainWindow : Window {
         await Guard(async ct => { await EnsureModel(ct); StatusText.Text="Understanding your demonstration locally…"; draft = await ai.Discover(trace,ct); ShowDraft(draft); StatusText.Text = "Discovery complete. Review the proposed workflow."; recording.Clear(); CaptureCount.Text="Recording cleared from memory."; });
     }
     void ShowDraft(Workflow w) {
-        draft = w; NameBox.Text = w.Name; GoalBox.Text = w.Goal; WorkflowJson.Text = Json.Write(w);
+        draft = w; AutoRunToggle.IsEnabled=w.IsFreshTransfer;AutoRunToggle.IsChecked=w.AutoRun; NameBox.Text = w.Name; GoalBox.Text = w.Goal; WorkflowJson.Text = Json.Write(w);
         ReviewSummary.Text = "Review what Kopi inferred. Correct uncertain details before approving.";
         QuestionsText.Text = w.Questions.Length > 0 ? "Needs clarification: " + string.Join(" · ",w.Questions) : "No open clarification questions. Check the destination and success conditions.";
-        StepsText.Text = string.Join("\n",w.Steps.Select((s,i)=>$"{i+1}. {s.Kind}  {s.Url} {s.Selector}")) + "\n\nInputs:\n" + string.Join("\n",w.Variables.Select(v=>$"{v.Name}: {v.Description}{(v.Required ? " (required)" : " (optional)")}"));
+        StepsText.Text = (w.IsFreshTransfer?"Fresh transfer: "+Json.Write(w.Steps[0].Transfer)+"\n\n":"")+string.Join("\n",w.Steps.Select((s,i)=>$"{i+1}. {s.Kind}  {s.Url} {s.Selector}")) + "\n\nInputs:\n" + string.Join("\n",w.Variables.Select(v=>$"{v.Name}: {v.Description}{(v.Required ? " (required)" : " (optional)")}"));
         Tabs.SelectedIndex = 1;
     }
     async void ClarifyWorkflow(object sender,RoutedEventArgs e) => await Guard(async ct=>{
@@ -73,9 +75,9 @@ public partial class MainWindow : Window {
     });
     void SaveWorkflow(object sender,RoutedEventArgs e) {
         try {
-            var w = Json.Read<Workflow>(WorkflowJson.Text); w.Name = NameBox.Text.Trim(); w.Goal = GoalBox.Text.Trim();
+            var w = Json.Read<Workflow>(WorkflowJson.Text); w.AutoRun=AutoRunToggle.IsChecked==true; w.Name = NameBox.Text.Trim(); w.Goal = GoalBox.Text.Trim();
             w.Validate(); w.Approved = true; w.Id = draft?.Id ?? Guid.NewGuid().ToString("N");
-            workflows.RemoveAll(x=>x.Id==w.Id); workflows.Add(w); store.Save(workflows); Refresh(); WorkflowList.SelectedItem=w; Tabs.SelectedIndex=2; StatusText.Text="Saved. Open a new source page and preview this workflow.";
+            workflows.RemoveAll(x=>x.Id==w.Id); workflows.Add(w); store.Save(workflows); if(w.AutoRun){SuggestToggle.IsChecked=true;bridge.Suggestions=true;}Refresh(); WorkflowList.SelectedItem=w; Tabs.SelectedIndex=2; StatusText.Text="Saved. Open a new source page and preview this workflow.";
         } catch(Exception ex) { StatusText.Text=ex.Message; }
     }
     Workflow Selected() => WorkflowList.SelectedItem as Workflow ?? throw new InvalidOperationException("Choose a saved workflow first.");
@@ -87,7 +89,7 @@ public partial class MainWindow : Window {
     async void PreviewRun(object sender,RoutedEventArgs e) => await Guard(async ct=>{
         var w=Selected(); RunButton.IsEnabled=false; previewWorkflow=null;
         await EnsureModel(ct); var page=Json.Read<Evidence>(await bridge.Send("snapshot",new{},ct));
-        StatusText.Text="Extracting new values locally…"; var values=await ai.Extract(w,page,ct); ValuesJson.Text=Json.Write(values); ValuesGrid.ItemsSource=w.Variables.Select(v=>new RunValue{Name=v.Name,Value=values.GetValueOrDefault(v.Name,""),Required=v.Required}).ToList(); previewWorkflow=w;
+        StatusText.Text="Extracting new values locally…"; var values=w.IsFreshTransfer?new Dictionary<string,string>():await ai.Extract(w,page,ct);previewInstance=page.InstanceId; ValuesJson.Text=Json.Write(values); ValuesGrid.ItemsSource=w.Variables.Select(v=>new RunValue{Name=v.Name,Value=values.GetValueOrDefault(v.Name,""),Required=v.Required}).ToList(); previewWorkflow=w;
         RunDestination.Text="You are approving: "+w.Goal+"\nDestination(s): "+string.Join(", ",w.Steps.Where(s=>s.Url.Length>0).Select(s=>s.Url));
         RunButton.IsEnabled=true; StatusText.Text="Review the extracted values, then approve this run.";
     });
@@ -96,7 +98,7 @@ public partial class MainWindow : Window {
         ValuesGrid.CommitEdit(DataGridEditingUnit.Cell,true);ValuesGrid.CommitEdit(DataGridEditingUnit.Row,true);
         var values=((List<RunValue>)ValuesGrid.ItemsSource).ToDictionary(x=>x.Name,x=>x.Value); RunButton.IsEnabled=false; previewWorkflow=null;
         var executor=new Executor(bridge,store);
-        RunProgress.Text=await executor.Run(w,values,new Progress<string>(s=>RunProgress.Text=s),ct);
+        RunProgress.Text=await executor.Run(w,values,new Progress<string>(s=>RunProgress.Text=s),ct,previewInstance);
         StatusText.Text=RunProgress.Text;
     });
     void SuggestionChanged(object sender,RoutedEventArgs e) { bridge.Suggestions=SuggestToggle.IsChecked==true; }
@@ -104,10 +106,16 @@ public partial class MainWindow : Window {
         PairCodeBox.Text=bridge.PairCode;
         if(bridge.Observing) { if(recording.Count<200){recording.Add(e);CaptureCount.Text=$"{recording.Count} observations · recording in memory";}else{bridge.Observing=false;RecordButton.IsEnabled=true;StopButton.IsEnabled=true;StatusText.Text="Recording limit reached. Stop and discover, or start a shorter demonstration.";} return; }
         if(!bridge.Suggestions||busy||e.Kind!="page"||workflows.Count==0)return;
-        var key=e.Url; if(suggested.Contains(key))return; suggested.Add(key);
+        var key=e.Url+"|"+e.InstanceId; if(suggested.Contains(key))return; suggested.Add(key);
         await Guard(async ct=>{
             await EnsureModel(ct);
-            foreach(var w in workflows.Where(w=>w.Approved)) if(await ai.Relevant(w,e,ct)) {
+            foreach(var w in workflows.Where(w=>w.Approved&&(!w.IsFreshTransfer||new Uri(w.Steps[0].Url).GetLeftPart(UriPartial.Path)==new Uri(e.Url).GetLeftPart(UriPartial.Path)))) if(await ai.Relevant(w,e,ct)) {
+                if(w.AutoRun&&w.IsFreshTransfer) {
+                    if(string.IsNullOrWhiteSpace(e.InstanceId))throw new InvalidOperationException("Automatic transfer needs a current challenge instance.");
+                    await bridge.Send("bind",new{instanceId=e.InstanceId},ct);
+                    RunProgress.Text=await new Executor(bridge,store).Run(w,new(),new Progress<string>(s=>RunProgress.Text=s),ct,e.InstanceId);
+                    StatusText.Text=RunProgress.Text;return;
+                }
                 WorkflowList.SelectedItem=w; Tabs.SelectedIndex=2;
                 tray.ShowBalloonTip(5000,"Kopi found a shortcut",$"{w.Name} may fit this page. Open Kopi to preview it.",System.Windows.Forms.ToolTipIcon.Info);
                 StatusText.Text=$"{w.Name} may fit this page. Preview it to review the new values."; break;
