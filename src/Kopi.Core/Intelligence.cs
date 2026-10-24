@@ -23,6 +23,7 @@ public sealed class LlamaModel : ILocalModel, IDisposable {
     public void Dispose() => client.Dispose();
 }
 public sealed class Intelligence(ILocalModel model) {
+    public async Task<TaskUnderstanding> Understand(IEnumerable<Evidence> recording,CancellationToken ct) => Json.Read<TaskUnderstanding>(await model.Complete("Infer the general goal and source/destination relationship from this demonstration, without generating executable actions. Identify whether values must be obtained freshly during EACH future run and whether they are temporary sensitive values that must never be stored. A redacted value is evidence of its role, never a constant to replay. Describe a semantic trigger rather than an example-specific URL. Ask about genuine ambiguity. Return the supplied JSON schema only.",Condense(recording),ct,TaskUnderstandingSchema.Value));
     public static string Condense(IEnumerable<Evidence> recording) {
         var clean = recording.Select(Privacy.Sanitize).ToList();
         if (clean.Count == 0) throw new InvalidDataException("No browser activity recorded. Connect the extension first.");
@@ -47,6 +48,7 @@ public sealed class Intelligence(ILocalModel model) {
         Generalise values using variables, not recorded literals. Do not invent selectors or facts.
         Start execution on the NEW source page the user already opened. Never navigate back to a demonstrated source URL. Copy and paste are evidence, not executable action kinds.
         Use appendRow for spreadsheet destinations; its URL retains spreadsheet ID, columns match recorded evidence. Prefer it over canvas clicks. For missing tab name use Sheet1 and ask user to confirm it in questions.
+        These available actions cannot wait for fresh future data or read values from another page during execution. If the task needs those capabilities, include an explicit question explaining that live extraction is not yet supported, rather than inventing actions or a static value. Never include authentication codes in a saved workflow.
         General forms use navigate/fill/click with observed selectors. Every click needs an observed success locator, otherwise ask a question.
         Optional missing fields are blank. sourceHosts may be empty for semantic cross-site matching.
         Ask clarification questions for uncertain mappings, constants, verification or goals. No arbitrary code. No markdown.
@@ -72,7 +74,7 @@ public sealed class Intelligence(ILocalModel model) {
         w.Approved = false; w.Id = Guid.NewGuid().ToString("N"); return w;
     }
     public async Task<Workflow> Clarify(Workflow w, string answer, CancellationToken ct) {
-        var updated=Json.Read<Workflow>(await model.Complete("Revise this proposed workflow using the user clarification. Return ONLY a full workflow JSON object with the exact same schema. Keep actions limited to navigate/fill/click/appendRow. Clear questions only when resolved. Do not mark approved. Existing proposal:\n"+Json.Write(w), "User clarification: "+Privacy.Limit(answer,3000),ct));
+        var updated=Json.Read<Workflow>(await model.Complete("Revise this proposed workflow using the user clarification. Return ONLY a full workflow JSON object with the exact same schema. Keep actions limited to navigate/fill/click/appendRow. Clear questions only when resolved. Do not mark approved. Existing proposal:\n"+Json.Write(w), "User clarification: "+Privacy.Limit(answer,3000),ct,w.Steps.Any(s=>s.Kind=="appendRow")?WorkflowSchema.ForSpreadsheet(w.Steps.First(s=>s.Kind=="appendRow").Url):WorkflowSchema.Value));
         updated.Id=w.Id; updated.Approved=false; return updated;
     }
     public async Task<Dictionary<string, string>> Extract(Workflow w, Evidence page, CancellationToken ct) {

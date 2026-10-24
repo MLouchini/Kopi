@@ -1,5 +1,6 @@
 param([string]$PublishDir='artifacts/app')
 $ErrorActionPreference='Stop'
+New-Item -ItemType Directory -Force artifacts | Out-Null
 # App-local deployment of the Visual C++ redistributable avoids a separate admin installer.
 $crt=Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT" -Directory | Sort-Object FullName -Descending | Select-Object -First 1
 if (!$crt) { throw 'Visual C++ x64 redistributable directory was not found.' }

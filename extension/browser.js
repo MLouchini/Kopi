@@ -4,7 +4,7 @@ globalThis.KopiBrowser = {
     const root = document.querySelector('main,article,[role=main]') || document.body;
     const clone = root.cloneNode(true);
     clone.querySelectorAll('script,style,input,textarea,[contenteditable],nav,footer,[hidden]').forEach(x=>x.remove());
-    return {kind:'page',url:location.href,title:document.title,text:(clone.innerText||clone.textContent||'').replace(/\s+/g,' ').slice(0,4000)};
+    return {kind:'page',url:location.href,title:document.title,text:KopiPrivacy.text((clone.innerText||clone.textContent||'').replace(/\s+/g,' ').slice(0,4000),document.title)};
   },
   async action({step}) {
     if (!['fill','click'].includes(step.kind)) throw Error('Unsupported DOM action');

@@ -1,1 +1,37 @@
-{"manifest_version":3,"name":"Kopi — teach your browser","version":"0.1.0","description":"Explicitly observe and run approved workflows in your existing signed-in browser.","permissions":["storage","tabs","scripting","debugger","alarms"],"host_permissions":["http://127.0.0.1:47653/*","http://*/*","https://*/*"],"background":{"service_worker":"background.js"},"action":{"default_popup":"popup.html"},"content_scripts":[{"matches":["http://*/*","https://*/*"],"js":["capture.js"],"run_at":"document_idle"}]}
+{
+  "manifest_version": 3,
+  "name": "Kopi \u2014 teach your browser",
+  "version": "0.1.0",
+  "description": "Explicitly observe and run approved workflows in your existing signed-in browser.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "debugger",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:47653/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "privacy.js",
+        "capture.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

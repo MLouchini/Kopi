@@ -42,11 +42,14 @@ public sealed class Workflow {
     }
 }
 public static class Privacy {
+    public static string RedactText(string text,string context="") => Regex.IsMatch(context+" "+text,@"verification|security\s*code|one[ -]?time|two[ -]?factor|authenticat|sign[ -]?in\s*code|\b2fa\b",RegexOptions.IgnoreCase)?Regex.Replace(text,@"\b\d{4,8}\b","[temporary code omitted]"):text;
     public static Evidence Sanitize(Evidence e) {
         var u = Workflow.SafeUrl(e.Url);
         var safeUrl = u.GetLeftPart(UriPartial.Path); // query/fragment may contain tokens
+        var verification=Regex.IsMatch(e.FieldType+" "+e.Label+" "+e.Selector,"one-time-code|verification|otp|otc",RegexOptions.IgnoreCase);
+        if(verification)return e with {Url=safeUrl,Title=RedactText(e.Title,e.Text),Text=RedactText(e.Text,e.Title),Value="[temporary value omitted]",FieldType="one-time-code"};
         if (Regex.IsMatch(e.FieldType + " " + e.Label + " " + e.Selector, "password|secret|token|credit.?card|cc-number|one.?time|otp|cvc|cvv", RegexOptions.IgnoreCase)) return e with { Url = safeUrl, Text = "", Value = "", Label = "[sensitive field omitted]", Selector = "" };
-        return e with { Url = safeUrl, Title = Limit(e.Title, 200), Text = Limit(e.Text, 4000), Value = Limit(e.Value, 2000), Label = Limit(e.Label, 200), Selector = Limit(e.Selector, 400) };
+        return e with { Url = safeUrl, Title = RedactText(Limit(e.Title, 200),e.Text), Text = RedactText(Limit(e.Text, 4000),e.Title), Value = Regex.IsMatch(e.Value,@"^\d{4,8}$")&&e.Kind is "copy" or "paste"?"[temporary value omitted]":RedactText(Limit(e.Value, 2000),e.Title+" "+e.Label+" "+e.Text), Label = Limit(e.Label, 200), Selector = Limit(e.Selector, 400) };
     }
     public static string Limit(string s, int length) => s.Length <= length ? s : s[..length];
 }
