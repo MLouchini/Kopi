@@ -27,7 +27,7 @@ globalThis.KopiBrowser = {
     return {verified:true};
   },
   async csv({url}) {
-    const response = await fetch(url,{credentials:'include',cache:'no-store'});
+    const response = await fetch(url,{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(15000)});
     if(!response.ok)throw Error('Cannot read spreadsheet. Check access and login.');
     const text=await response.text();
     if (/^\s*<!doctype|^\s*<html/i.test(text))throw Error('Spreadsheet returned a login page.');

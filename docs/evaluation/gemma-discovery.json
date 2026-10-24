@@ -1,0 +1,53 @@
+{
+  "id": "d818a9f8b6674f2da2f84530eb877855",
+  "name": "Job Posting to Spreadsheet Transfer",
+  "goal": "Extract job details from a job posting page and append them as a new row to a spreadsheet.",
+  "trigger": "webpage",
+  "sourceHosts": [],
+  "variables": [
+    {
+      "name": "company_name",
+      "description": "The name of the company offering the job, extracted from the job posting content.",
+      "required": true
+    },
+    {
+      "name": "role_title",
+      "description": "The specific job title or role being offered, extracted from the job posting content.",
+      "required": true
+    },
+    {
+      "name": "location",
+      "description": "The geographical location associated with the job posting.",
+      "required": true
+    },
+    {
+      "name": "salary",
+      "description": "The salary offered for the position, which may be optional.",
+      "required": false
+    },
+    {
+      "name": "url",
+      "description": "The direct URL of the job posting page.",
+      "required": true
+    }
+  ],
+  "steps": [
+    {
+      "kind": "appendRow",
+      "url": "https://docs.google.com/spreadsheets/d/test-tracker/edit",
+      "selector": "",
+      "value": "",
+      "verifySelector": ""
+    }
+  ],
+  "columns": [
+    "company_name",
+    "role_title",
+    "location",
+    "salary",
+    "url"
+  ],
+  "sheetName": "Tracker",
+  "questions": [],
+  "approved": false
+}
