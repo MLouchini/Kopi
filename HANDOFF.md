@@ -1,5 +1,14 @@
 # Local Windows continuation
 
+## Local setup verified — 24 October 2026
+
+- Installed Microsoft .NET SDK **10.0.402** with the .NET, ASP.NET Core and Windows Desktop **10.0.13** runtimes. Existing .NET 8 remains installed.
+- `dotnet build src/Kopi.Desktop -c Release --no-restore` passed with zero warnings/errors after restore. Launched the WPF app and verified its four tabs, pairing control and loopback bridge on port 47653.
+- Downloaded the manifest-pinned model and CPU runtime to the user's Kopi data directory and verified their SHA-256 digests. Completed installation through the app's Setup screen. Status: **Local model ready · CPU · 8K context**. One small real JSON inference request passed in approximately one second; this is a startup smoke check, not a workflow benchmark.
+- Browser extension loading/pairing and real-account workflow acceptance still require the user's browser. No personal account was used for the startup check.
+- User explicitly declined adding OpenRouter; keep inference local.
+- GitHub Pages is live with working public release downloads; see the updated hosting note below. The expanded Windows model QA finished with a workflow-clarification failure, also recorded below.
+
 ## User direction
 
 - Build a real local-AI browser workflow learner with C#/.NET and WPF. Core workflow functionality comes first.
@@ -52,7 +61,7 @@ Load the repo's `extension` folder (or the matching folder beside packaged Kopi.
 - Expanded Windows browser tests cover success, stale/multiple/missing codes, wrong sender/account, already-completed and changed challenges, cancellation, and duplicate prevention.
 - Final in-progress two-pass run at handoff preparation:
   https://github.com/MLouchini/Kopi/actions/runs/40097950425
-  It tests cold download/load/real inference, model-learned extension execution, saved-rule persistence, warm restart with the **same saved rule**, and a second WhatsApp-style learned fixture. See the final result appended below; do not infer success from earlier narrower runs.
+  It tests cold download/load/real inference, model-learned extension execution, saved-rule persistence, warm restart with the **same saved rule**, and a second WhatsApp-style learned fixture. **Final result: failed.** Download/checksum and initial inference ran, but spreadsheet workflow clarification still asked for the tab name and `Workflow.Validate()` rejected it with "Review spreadsheet column order and tab name." The later saved-rule/browser passes were not reached; do not infer their success from earlier narrower runs.
 
 ## Exact next local acceptance test
 
@@ -72,7 +81,7 @@ Load the repo's `extension` folder (or the matching folder beside packaged Kopi.
 - Cancellation prevents later submission at a cancellation check; an action already submitted can finish. Uncertain-run receipts block blind retry. After correcting a source mismatch, start a new challenge or inspect the destination before retrying.
 - Download time on the laptop depends on its network. Native memory figures above exclude the rest of the OS/browser, and the cloud CPU differs from Intel hardware.
 - Modern .NET/WPF is retained; do not accidentally migrate to legacy 4.8 under the assumption the app is currently a web frontend.
-- Static landing page and Pages workflow exist, but Pages is not enabled. GitHub integration returned HTTP 403 when enabling it; owner must set Settings → Pages → Source: GitHub Actions and rerun the website workflow.
+- GitHub Pages is enabled and live at https://mlouchini.github.io/Kopi/. Deployment `40100116315` succeeded. Installer, portable ZIP and SHA-256 links were verified publicly with HTTP 200. Downloads are explicitly labelled **v0.1.1** and do not include the newer automatic-verification work.
 
 ## Packaging after local validation
 
