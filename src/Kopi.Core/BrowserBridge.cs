@@ -71,5 +71,12 @@ public sealed class BrowserBridge : IBrowserSession, IDisposable {
         pending[id]=tcs;queue.Enqueue(new(id,kind,payload));
         try{return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(90),ct);}finally{pending.TryRemove(id,out _);}
     }
-    public void Dispose(){foreach(var t in pending.Values)t.TrySetCanceled();if(app!=null){app.StopAsync().GetAwaiter().GetResult();app.DisposeAsync().AsTask().GetAwaiter().GetResult();}}
+    public void Dispose(){
+        foreach(var t in pending.Values)t.TrySetCanceled();
+        if(app is not {} server)return;
+        app=null;
+        // WPF closes on its dispatcher thread. Run asynchronous host shutdown without
+        // capturing that dispatcher, which is blocked until Dispose returns.
+        Task.Run(async()=>{await server.StopAsync();await server.DisposeAsync();}).GetAwaiter().GetResult();
+    }
 }

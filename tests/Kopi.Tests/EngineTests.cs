@@ -2,6 +2,17 @@ using Kopi.Core;
 using Xunit;
 namespace Kopi.Tests;
 public sealed class EngineTests {
+    sealed class NonPumpingContext : SynchronizationContext {
+        public override void Post(SendOrPostCallback callback,object? state) { }
+    }
+    [Fact] public async Task BridgeShutdownDoesNotWaitForTheWindowDispatcher() {
+        await Task.Run(()=>{
+            var bridge=new BrowserBridge();bridge.Start();
+            var previous=SynchronizationContext.Current;
+            try{SynchronizationContext.SetSynchronizationContext(new NonPumpingContext());bridge.Dispose();}
+            finally{SynchronizationContext.SetSynchronizationContext(previous);}
+        }).WaitAsync(TimeSpan.FromSeconds(10));
+    }
     static Workflow Sample() => new() { Name="Save contact",Goal="Transfer contact details",Trigger="A contact profile",Approved=true,Variables=[new("name","Full name")],Steps=[new("navigate","https://example.org/form"),new("fill",Selector:"#name",Value:"{{name}}"),new("click",Selector:"#save",VerifySelector:"#success")] };
     [Fact] public void PrivacyRemovesSensitiveValuesAndUrlTokens() {
         var e=Privacy.Sanitize(new("fill","https://example.org/path?access_token=SECRET#token","Login",Value:"SECRET",FieldType:"password"));

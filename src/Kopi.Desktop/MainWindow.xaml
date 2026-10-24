@@ -1,22 +1,164 @@
-<Window x:Class="Kopi.Desktop.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kopi · Teach once. Do more." Width="1120" Height="860" MinWidth="850" MinHeight="650" Background="#F7F4F0" FontFamily="Segoe UI" FontSize="15">
-<Grid><Grid.RowDefinitions><RowDefinition Height="100"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-<Border Background="#29222E" Padding="32,18"><DockPanel><StackPanel DockPanel.Dock="Right" VerticalAlignment="Center"><TextBlock Text="LOCAL INTELLIGENCE" Foreground="#FFB24F" FontSize="11" FontWeight="Bold"/><TextBlock Text="Your browser. Your session." Foreground="#E5DDE7" FontSize="13"/></StackPanel><StackPanel><TextBlock Text="Kopi ↻" FontSize="32" FontWeight="Bold" Foreground="#FF9D3D"/><TextBlock Text="Teach once. Make room for what matters." Foreground="#E5DDE7" FontSize="13"/></StackPanel></DockPanel></Border>
-<TabControl x:Name="Tabs" Grid.Row="1" Margin="26,20" Background="Transparent" BorderThickness="0">
-<TabItem Header="1  Observe"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,24">
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Heading}" Text="Show Kopi how you work."/><TextBlock Text="Connect your browser in Setup, then demonstrate one complete task. Start on the source page and finish at the destination. Keep unrelated and private tabs out of the demonstration."/><WrapPanel Margin="0,20,0,10"><Button x:Name="RecordButton" Content="●  Start observing" Click="StartObserving"/><Button x:Name="StopButton" Content="Stop &amp; discover" Click="StopObserving" IsEnabled="False" Background="#ECE7EF"/></WrapPanel><TextBlock x:Name="CaptureCount" Text="Not observing · no activity stored" Foreground="#776B7D"/><CheckBox x:Name="SuggestToggle" Margin="0,24,0,0" Content="Offer saved workflows when the active page looks relevant" Checked="SuggestionChanged" Unchecked="SuggestionChanged"/><TextBlock Text="Optional: sends a condensed active-page snapshot to your local model. Suggestions ask before running. An explicitly enabled automatic workflow can run within its saved verification scope." FontSize="12" Margin="24,6,0,0" Foreground="#776B7D"/></StackPanel></Border>
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="A good first demonstration" FontSize="19" FontWeight="SemiBold"/><TextBlock Margin="0,12,0,0" Text="Open a listing → copy the relevant details → paste a row into your tracker. Kopi will ask you to confirm anything it cannot infer from the evidence."/><TextBlock Margin="0,14,0,0" Text="Recording stays in memory and is cleared after discovery. Password and payment fields are excluded; page text may still contain personal information. Only observe pages you intend to share with your local model." Foreground="#776B7D" FontSize="13"/></StackPanel></Border>
-</StackPanel></ScrollViewer></TabItem>
-<TabItem Header="2  Review"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,24">
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Heading}" Text="Make it yours."/><TextBlock x:Name="ReviewSummary" Text="Your discovered workflow will appear here. Review the goal, variables, destination and success checks before saving."/><TextBlock Text="Workflow name" Margin="0,18,0,0"/><TextBox x:Name="NameBox" AutomationProperties.Name="Workflow name"/><TextBlock Text="What it does"/><TextBox x:Name="GoalBox" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="65" AutomationProperties.Name="Workflow goal"/><TextBlock x:Name="QuestionsText" Foreground="#9B3E12" Margin="0,8"/><TextBox x:Name="ClarificationBox" MinHeight="65" TextWrapping="Wrap" AcceptsReturn="True" AutomationProperties.Name="Workflow clarification" ToolTip="For example: the tab is Tracker; columns are company, role, location, salary, URL."/><Button Content="Apply my clarification" Click="ClarifyWorkflow" HorizontalAlignment="Left" Background="#ECE7EF"/><TextBlock Text="Steps and inputs" FontWeight="SemiBold"/><TextBlock x:Name="StepsText" Margin="0,12"/><Expander Header="Edit workflow details (JSON)"><TextBox x:Name="WorkflowJson" FontFamily="Consolas" FontSize="12" Height="260" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Workflow JSON"/></Expander><TextBlock Text="Resolve questions by editing the specification and clearing its questions list. Confirm sheetName and columns match the destination. Changes require approval again." FontSize="12" Foreground="#776B7D" Margin="0,10"/><CheckBox x:Name="AutoRunToggle" Margin="0,14" HorizontalContentAlignment="Stretch"><TextBlock Text="Run this scoped fresh-value workflow automatically when its challenge is recognised"/></CheckBox><TextBlock Text="Enable once for this exact source and account/organisation. Future matching challenges run without another prompt; ambiguous, stale or missing values stop the run." FontSize="12" Foreground="#776B7D"/><Button Content="Approve &amp; save workflow" Click="SaveWorkflow" HorizontalAlignment="Left"/></StackPanel></Border>
-</StackPanel></ScrollViewer></TabItem>
-<TabItem Header="3  Automations"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,24">
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Heading}" Text="Your everyday shortcuts."/><TextBlock Text="Select a workflow, open a new source page in your browser, then preview the values. Nothing is written until you approve the run."/><ListBox x:Name="WorkflowList" DisplayMemberPath="Name" MinHeight="80" MaxHeight="180" Margin="0,18,0,10" SelectionChanged="WorkflowSelected"/><WrapPanel><Button Content="Preview from current browser tab" Click="PreviewRun"/><Button Content="Edit selected workflow" Click="EditWorkflow" Background="#ECE7EF"/><Button Content="Delete" Click="DeleteWorkflow" Background="#ECE7EF"/></WrapPanel></StackPanel></Border>
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Review this run" FontSize="22" FontWeight="SemiBold"/><TextBlock x:Name="RunDestination" Text="Preview a workflow to see its destination and extracted values." Margin="0,10"/><DataGrid x:Name="ValuesGrid" AutoGenerateColumns="False" CanUserAddRows="False" MinHeight="150" Margin="0,8,0,16" HeadersVisibility="Column" AutomationProperties.Name="Values to approve"><DataGrid.Columns><DataGridTextColumn Header="Input" Binding="{Binding Name}" IsReadOnly="True" Width="180"/><DataGridTextColumn Header="Value (editable)" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*"/><DataGridCheckBoxColumn Header="Required" Binding="{Binding Required}" IsReadOnly="True" Width="80"/></DataGrid.Columns></DataGrid><Expander Header="Inspect extracted JSON"><TextBox x:Name="ValuesJson" IsReadOnly="True" FontFamily="Consolas" MaxHeight="180" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/></Expander><TextBlock Text="Running may edit a website or spreadsheet using your signed-in account. Review every value and destination. Sheets uses the clipboard temporarily, replacing its current contents." FontSize="13" Foreground="#776B7D"/><Button x:Name="RunButton" Content="Approve values &amp; run" Click="RunWorkflow" IsEnabled="False" HorizontalAlignment="Left"/><TextBlock x:Name="RunProgress" Text="No run in progress." Margin="0,12"/></StackPanel></Border>
-</StackPanel></ScrollViewer></TabItem>
-<TabItem Header="Setup"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,24">
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Style="{StaticResource Heading}" Text="A little setup. All local."/><TextBlock Text="1. Connect your existing Chrome or Edge" FontSize="19" FontWeight="SemiBold"/><TextBlock Margin="0,10" Text="Open your browser's Extensions page, enable Developer mode and choose Load unpacked. Select the extension folder beside Kopi.exe. Pin Kopi, open its popup and paste this pairing code. Your logins remain in your browser."/><TextBox x:Name="PairCodeBox" IsReadOnly="True" FontFamily="Consolas" AutomationProperties.Name="Browser pairing code"/><Button Content="Open extension folder" Click="OpenExtension" HorizontalAlignment="Left"/><TextBlock Text="The browser requires broad website access for observation and an explicit debugger banner during spreadsheet entry. Enable only on sites you trust. Re-pair after restarting Kopi." Foreground="#776B7D" FontSize="12"/></StackPanel></Border>
-<Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="2. Install the local AI" FontSize="19" FontWeight="SemiBold"/><TextBlock Margin="0,10" Text="Download Gemma 4 E2B and its CPU runtime (about 3.4 GB). Kopi verifies the pinned SHA-256 checksums before use. Allow about 8 GB of free disk space during setup. No cloud inference is used."/><WrapPanel><Button Content="Download &amp; install local AI" Click="InstallModel"/><Button Content="Start local model" Click="StartModel" Background="#ECE7EF"/></WrapPanel><TextBlock Text="Initial target: Q4 weights, 8K context, at most 1,800 output tokens. Speed and RAM usage depend on the actual quantization; laptop benchmarks are pending." Foreground="#776B7D" FontSize="12"/><Button Content="Open local data folder" Click="OpenData" HorizontalAlignment="Left" Background="#ECE7EF"/><TextBlock Text="Workflows and duplicate-prevention receipts are stored locally under your Windows account. Delete that folder to remove them. Website cookies remain managed by your browser." FontSize="12" Foreground="#776B7D"/></StackPanel></Border>
-</StackPanel></ScrollViewer></TabItem>
-</TabControl>
-<Border Grid.Row="2" Background="#EEE8EF" Padding="24,12"><DockPanel><Button x:Name="CancelButton" DockPanel.Dock="Right" Content="Cancel" Padding="12,4" Margin="12,0,0,0" Click="CancelWork" Visibility="Collapsed"/><TextBlock x:Name="StatusText" Text="Welcome. Open Setup to connect your browser and install the local model." VerticalAlignment="Center"/></DockPanel></Border>
-</Grid></Window>
+<Window x:Class="Kopi.Desktop.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Kopi" Width="1120" Height="860" MinWidth="850" MinHeight="650" Background="{StaticResource Paper}" FontFamily="Segoe UI" FontSize="14">
+  <Grid Background="#FAFAF9">
+    <Grid.RowDefinitions>
+      <RowDefinition />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <TabControl x:Name="Tabs" BorderThickness="0" Background="Transparent">
+      <TabItem Header="Record">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,4,8,16">
+            <TextBlock Text="Record a workflow" Style="{StaticResource Heading}" />
+            <TextBlock Text="Open the source page in your browser, then show Kopi one complete task." Foreground="{StaticResource Muted}" Margin="0,0,0,26" />
+            <Border Style="{StaticResource Card}" Background="White" BorderBrush="#E4E2DF" Padding="26">
+              <StackPanel>
+                <TextBlock Text="Show Kopi the task" Foreground="#19191E" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,8" />
+                <TextBlock Text="Start recording, complete the task, then choose Stop &amp; discover." Foreground="#706B76" FontSize="13" />
+                <WrapPanel Margin="0,18,0,12">
+                  <Button x:Name="RecordButton" Content="●  Start recording" Click="StartObserving" Background="#FF7A1A" Foreground="{StaticResource Ink}" />
+                  <Button x:Name="StopButton" Content="Stop &amp; discover  →" Click="StopObserving" IsEnabled="False" Background="#EEECE9" Foreground="#19191E" />
+                </WrapPanel>
+                <TextBlock x:Name="CaptureCount" Text="Not observing · no activity stored" Foreground="#706B76" FontSize="11" />
+              </StackPanel>
+            </Border>
+            <TextBlock Text="Recording stays in memory and is cleared after discovery. Password and payment fields are excluded; page text may still contain personal information. Only observe pages you intend to share with your local model." Foreground="{StaticResource Muted}" FontSize="11" Margin="4,0,12,0" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Review">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,4,8,16">
+            <TextBlock Style="{StaticResource Heading}" Text="Review workflow" />
+            <TextBlock x:Name="ReviewSummary" Text="Your discovered workflow will appear here. Check the goal, inputs, destination and success checks before saving." Foreground="{StaticResource Muted}" Margin="0,0,0,24" />
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Workflow details" FontSize="21" FontWeight="SemiBold" Margin="0,0,0,18" />
+                <TextBlock Text="Workflow name" FontSize="12" FontWeight="SemiBold" />
+                <TextBox x:Name="NameBox" AutomationProperties.Name="Workflow name" />
+                <TextBlock Text="What it does" FontSize="12" FontWeight="SemiBold" />
+                <TextBox x:Name="GoalBox" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="65" AutomationProperties.Name="Workflow goal" />
+                <TextBlock x:Name="QuestionsText" Foreground="#9B4D28" Margin="0,4,0,10" />
+                <TextBlock Text="Add a correction or missing detail" FontSize="12" FontWeight="SemiBold" />
+                <TextBox x:Name="ClarificationBox" MinHeight="70" TextWrapping="Wrap" AcceptsReturn="True" AutomationProperties.Name="Workflow clarification" ToolTip="For example: the tab is Tracker; columns are company, role, location, salary, URL." />
+                <Button Content="Apply my clarification  →" Click="ClarifyWorkflow" HorizontalAlignment="Left" Style="{StaticResource SecondaryButton}" />
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Steps and approval" FontSize="21" FontWeight="SemiBold" />
+                <TextBlock x:Name="StepsText" Margin="0,14" />
+                <Expander Header="Edit workflow details (JSON)">
+                  <TextBox x:Name="WorkflowJson" FontFamily="Consolas" FontSize="12" Height="260" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Workflow JSON" />
+                </Expander>
+                <TextBlock Text="Resolve genuine questions in the specification. Confirm the spreadsheet tab and column order match the destination. Edits require approval again." FontSize="11" Foreground="{StaticResource Muted}" />
+                <CheckBox x:Name="AutoRunToggle" Margin="0,20,0,8">
+                  <TextBlock Text="Run this scoped fresh-value workflow automatically when its challenge is recognised" />
+                </CheckBox>
+                <TextBlock Text="Enable once for this exact source and account or organisation. Matching challenges run without another prompt; ambiguous, stale or missing values stop the run." FontSize="11" Foreground="{StaticResource Muted}" Margin="25,0,0,16" />
+                <Button Content="Approve &amp; save workflow  ↗" Click="SaveWorkflow" HorizontalAlignment="Left" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Workflows">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,4,8,16">
+            <TextBlock Style="{StaticResource Heading}" Text="Saved workflows" />
+            <TextBlock Text="Your saved shortcuts live here. Choose one, open a new source page in your browser, then preview the values." Foreground="{StaticResource Muted}" Margin="0,0,0,24" />
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <DockPanel>
+                  <Border DockPanel.Dock="Right" Background="#EDE6FA" CornerRadius="12" Padding="10,5">
+                    <TextBlock Text="WORKFLOW LIBRARY" FontFamily="Consolas" FontSize="10" />
+                  </Border>
+                  <TextBlock Text="Your shortcuts" FontSize="21" FontWeight="SemiBold" />
+                </DockPanel>
+                <ListBox x:Name="WorkflowList" DisplayMemberPath="Name" MinHeight="60" MaxHeight="180" Margin="0,18,0,12" SelectionChanged="WorkflowSelected" />
+                <WrapPanel>
+                  <Button Content="Preview from current tab  →" Click="PreviewRun" />
+                  <Button Content="Edit workflow" Click="EditWorkflow" Style="{StaticResource SecondaryButton}" />
+                  <Button Content="Delete" Click="DeleteWorkflow" Background="#F7E8E2" Foreground="#91472F" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Review this run" FontSize="23" FontWeight="SemiBold" />
+                <TextBlock x:Name="RunDestination" Text="Preview a workflow to see its destination and extracted values." Foreground="{StaticResource Muted}" FontSize="13" Margin="0,10,0,18" />
+                <DataGrid x:Name="ValuesGrid" AutoGenerateColumns="False" CanUserAddRows="False" MinHeight="150" Margin="0,0,0,16" HeadersVisibility="Column" AutomationProperties.Name="Values to approve">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Input" Binding="{Binding Name}" IsReadOnly="True" Width="150" />
+                    <DataGridTextColumn Header="Value (editable)" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+                    <DataGridCheckBoxColumn Header="Required" Binding="{Binding Required}" IsReadOnly="True" Width="70" />
+                  </DataGrid.Columns>
+                </DataGrid>
+                <Expander Header="Inspect extracted JSON">
+                  <TextBox x:Name="ValuesJson" IsReadOnly="True" FontFamily="Consolas" MaxHeight="180" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" />
+                </Expander>
+                <TextBlock Text="This can edit a website or spreadsheet using your signed-in account. Review every value and destination. Sheets temporarily replaces the clipboard contents." FontSize="11" Foreground="{StaticResource Muted}" Margin="0,0,0,14" />
+                <Button x:Name="RunButton" Content="Approve values &amp; run  ↗" Click="RunWorkflow" IsEnabled="False" HorizontalAlignment="Left" />
+                <TextBlock x:Name="RunProgress" Text="No run in progress." FontSize="12" Margin="0,12,0,0" Foreground="{StaticResource Muted}" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Setup">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,4,8,16">
+            <TextBlock Style="{StaticResource Heading}" Text="Setup" />
+            <TextBlock Text="Pair your browser and manage the local model." Foreground="{StaticResource Muted}" Margin="0,0,0,24" />
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <DockPanel Margin="0,0,0,12">
+                  <Border DockPanel.Dock="Left" Background="#DDD3FA" CornerRadius="13" Padding="10,7" Margin="0,0,12,0">
+                    <TextBlock Text="01" FontFamily="Consolas" />
+                  </Border>
+                  <TextBlock Text="Browser extension" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="In your normal Chrome or Edge, open Extensions, enable Developer mode and choose Load unpacked. Select Kopi's extension folder. Pin Kopi, open its popup and paste this pairing code." Foreground="{StaticResource Muted}" FontSize="13" />
+                <TextBox x:Name="PairCodeBox" IsReadOnly="True" FontFamily="Consolas" FontSize="16" AutomationProperties.Name="Browser pairing code" Margin="0,18,0,6" />
+                <Button Content="Open extension folder  ↗" Click="OpenExtension" HorizontalAlignment="Left" Style="{StaticResource SecondaryButton}" />
+                <TextBlock Text="Re-pair after restarting Kopi. The extension needs website access to observe tasks and a visible debugger banner during spreadsheet entry. Enable it only on sites you trust." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,10,0,0" />
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <DockPanel Margin="0,0,0,12">
+                  <Border DockPanel.Dock="Left" Background="#FFD6BB" CornerRadius="13" Padding="10,7" Margin="0,0,12,0">
+                    <TextBlock Text="02" FontFamily="Consolas" />
+                  </Border>
+                  <TextBlock Text="Local AI" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="Download Gemma 4 E2B and its CPU runtime, about 3.4 GB. Kopi verifies the downloads before use. Allow about 8 GB of free space during setup. No cloud inference is used." Foreground="{StaticResource Muted}" FontSize="13" />
+                <WrapPanel Margin="0,14,0,6">
+                  <Button Content="Download &amp; install local AI" Click="InstallModel" />
+                  <Button Content="Start local model" Click="StartModel" Style="{StaticResource SecondaryButton}" />
+                </WrapPanel>
+                <TextBlock Text="Q4 weights · 8K context · up to 1,800 output tokens. Speed and memory use depend on your computer." Foreground="{StaticResource Muted}" FontSize="11" />
+              </StackPanel>
+            </Border>
+            <Border Background="#EDE8F3" CornerRadius="18" Padding="22">
+              <StackPanel>
+                <TextBlock Text="Local data" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Workflows and duplicate-prevention receipts live in your Windows account. Website cookies stay in your browser. Closing Kopi stops its local model." Foreground="#716879" FontSize="12" Margin="0,10,0,8" />
+                <Button Content="Open local data folder  ↗" Click="OpenData" HorizontalAlignment="Left" Style="{StaticResource SecondaryButton}" />
+              </StackPanel>
+            </Border>
+            <CheckBox x:Name="SuggestToggle" Margin="4,5,12,0" Checked="SuggestionChanged" Unchecked="SuggestionChanged">
+              <TextBlock Text="Offer saved workflows when the active page looks relevant" />
+            </CheckBox>
+            <TextBlock Text="Optional: sends condensed page context to your local model. Suggestions ask before running. An explicitly enabled automatic workflow can run within its saved verification scope." FontSize="11" Margin="25,7,14,14" Foreground="{StaticResource Muted}" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+    <Border Grid.Row="1" Background="#F7F5F0" BorderBrush="#E3DED6" BorderThickness="0,1,0,0" Padding="22,11">
+      <DockPanel>
+        <Button x:Name="CancelButton" DockPanel.Dock="Right" Content="Cancel" Padding="14,6" Margin="12,0,0,0" Click="CancelWork" Visibility="Collapsed" Style="{StaticResource SecondaryButton}" />
+        <TextBlock x:Name="StatusText" Text="Welcome. Open Setup to connect your browser and install the local model." FontSize="11" Foreground="#756F7D" VerticalAlignment="Center" />
+      </DockPanel>
+    </Border>
+  </Grid>
+</Window>
