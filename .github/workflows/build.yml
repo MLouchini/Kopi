@@ -22,7 +22,7 @@ jobs:
       - name: Install test browser
         run: pwsh tests/Kopi.Tests/bin/Release/net10.0/playwright.ps1 install chromium
       - name: Functional tests
-        run: dotnet test tests/Kopi.Tests --no-build -c Release --logger "trx;LogFileName=windows.trx"
+        run: ./scripts/test.ps1
       - name: Publish self-contained Windows application
         run: dotnet publish src/Kopi.Desktop -c Release -r win-x64 --self-contained true -o artifacts/app -p:PublishReadyToRun=true
       - name: Bundle and validate native runtime prerequisites
