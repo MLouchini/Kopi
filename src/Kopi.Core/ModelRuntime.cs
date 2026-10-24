@@ -12,31 +12,28 @@ public sealed class ModelRuntime(LocalStore store) : IDisposable {
         var m = Json.Read<RuntimeManifest>(await File.ReadAllTextAsync(manifestPath, ct));
         if (!m.ModelName.Contains("gemma", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Choose a Gemma model manifest.");
         using var client = new HttpClient { Timeout = TimeSpan.FromHours(2) };
+        Stop();
         foreach (var asset in new[] { m.Runtime, m.Model }) {
-            if (!Uri.TryCreate(asset.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || asset.Sha256.Length != 64 || Path.GetFileName(asset.FileName) != asset.FileName) throw new InvalidDataException("Manifest requires HTTPS URLs, SHA-256 digests and simple file names.");
-            var path = store.PathFor(asset.FileName); var temp = path + ".download";
-            if (File.Exists(path) && await Hash(path, ct) == asset.Sha256.ToUpperInvariant()) continue;
-            try {
-                using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct); response.EnsureSuccessStatusCode();
-                await using (var input = await response.Content.ReadAsStreamAsync(ct))
-                await using (var output = File.Create(temp)) {
-                    var buffer = new byte[1024 * 1024]; long total = 0; int read;
-                    while ((read = await input.ReadAsync(buffer, ct)) > 0) { await output.WriteAsync(buffer.AsMemory(0, read), ct); total += read; progress.Report($"Downloading {asset.FileName}: {total / 1048576} MB" ); }
-                }
-                if (await Hash(temp, ct) != asset.Sha256.ToUpperInvariant()) throw new InvalidDataException("Download checksum mismatch. Artifact rejected.");
-                File.Move(temp, path, true);
-            } finally { if (File.Exists(temp)) File.Delete(temp); }
+            if (Path.GetFileName(asset.FileName) != asset.FileName || string.IsNullOrWhiteSpace(asset.FileName)) throw new InvalidDataException("Manifest has an invalid file name.");
+            var path = store.PathFor(asset==m.Model?"model.gguf":asset.FileName);
+            var legacy=store.PathFor(asset.FileName);
+            if(asset==m.Model&&!File.Exists(path)&&File.Exists(legacy)&&await VerifiedDownload.Hash(legacy,ct)==asset.Sha256.ToUpperInvariant())File.Move(legacy,path);
+            await VerifiedDownload.Fetch(client,asset,path,progress,ct);
+            if(asset==m.Model&&File.Exists(legacy)&&legacy!=path&&await VerifiedDownload.Hash(legacy,ct)==asset.Sha256.ToUpperInvariant())File.Delete(legacy);
         }
         var runtimeDir = store.PathFor("runtime"); Directory.CreateDirectory(runtimeDir);
         ZipFile.ExtractToDirectory(store.PathFor(m.Runtime.FileName), runtimeDir, true);
         var native=Path.Combine(AppContext.BaseDirectory,"native-runtime");
         if(Directory.Exists(native))foreach(var dll in Directory.GetFiles(native,"*.dll"))File.Copy(dll,Path.Combine(runtimeDir,Path.GetFileName(dll)),true);
-        File.Copy(store.PathFor(m.Model.FileName), store.PathFor("model.gguf"), true);
+
         File.WriteAllText(store.PathFor("installed-model.txt"), m.ModelName);
     }
-    static async Task<string> Hash(string p, CancellationToken ct) { await using var s = File.OpenRead(p); return Convert.ToHexString(await SHA256.HashDataAsync(s, ct)); }
     public async Task Start(IProgress<string> progress, CancellationToken ct) {
-        if (process is { HasExited: false }) return;
+        if (process is { HasExited: false }) {
+            using var probe=new HttpClient{Timeout=TimeSpan.FromSeconds(3)};probe.DefaultRequestHeaders.Authorization=new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",ApiKey);
+            try{using var health=await probe.GetAsync("http://127.0.0.1:47654/health",ct);if(health.IsSuccessStatusCode)return;}catch(HttpRequestException){}
+            Stop();
+        }
         var exe = Directory.Exists(store.PathFor("runtime")) ? Directory.GetFiles(store.PathFor("runtime"), "llama-server.exe", SearchOption.AllDirectories).FirstOrDefault() : null;
         if (exe == null || !File.Exists(store.PathFor("model.gguf"))) throw new InvalidOperationException("Install the local model from a verified model manifest in Setup first.");
         var info = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true };
@@ -47,12 +44,15 @@ public sealed class ModelRuntime(LocalStore store) : IDisposable {
         process.ErrorDataReceived += Capture; process.OutputDataReceived += Capture; process.BeginErrorReadLine(); process.BeginOutputReadLine();
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer",ApiKey);
+        try {
         for (var i = 0; i < 180; i++) {
             ct.ThrowIfCancellationRequested(); if (process.HasExited) { lock(log) throw new IOException("Local model failed: " + string.Join('\n',log)); }
             try { using var response = await client.GetAsync("http://127.0.0.1:47654/health", ct); if (response.IsSuccessStatusCode) { progress.Report("Local model ready · CPU · 8K context"); return; } } catch (HttpRequestException) {} catch (TaskCanceledException) when (!ct.IsCancellationRequested) {}
             progress.Report("Loading local model…"); await Task.Delay(1000, ct);
         }
-        throw new TimeoutException("Model loading exceeded three minutes. Try a smaller quantization.");
+        throw new TimeoutException("Model loading exceeded three minutes. Check available RAM and retry.");
+        }catch{Stop();throw;}
     }
-    public void Dispose() { if (process is { HasExited: false }) process.Kill(true); process?.Dispose(); }
+    public void Stop() { if (process is { HasExited: false }) process.Kill(true);process?.Dispose();process=null; }
+    public void Dispose() => Stop();
 }

@@ -5,7 +5,10 @@ namespace Kopi.Tests;
 public sealed class LocalModelFactAttribute : FactAttribute { public LocalModelFactAttribute(){if(Environment.GetEnvironmentVariable("KOPI_REAL_MODEL")!="1")Skip="Opt-in: start the real Gemma llama-server and set KOPI_REAL_MODEL=1.";} }
 public sealed class RealModelTests {
     [LocalModelFact] public async Task GemmaGeneralisesTrackerAndExtractsUnseenLayouts() {
-        using var model=new LlamaModel();var ai=new Intelligence(model);var watch=Stopwatch.StartNew();
+        using var model=new LlamaModel(); await VerifyTracker(model,Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath());
+    }
+    public static async Task VerifyTracker(ILocalModel model,string reportDir) {
+        var ai=new Intelligence(model);var watch=Stopwatch.StartNew();
         Evidence[] trace=[
             new("page","https://careers.example.org/jobs/100","Acme internship","Acme Labs. Software Engineering Intern. London. Salary £25,000. Apply: https://careers.example.org/jobs/100"),
             new("copy","https://careers.example.org/jobs/100","Acme internship",Value:"Acme Labs\tSoftware Engineering Intern\tLondon\t£25,000\thttps://careers.example.org/jobs/100"),
@@ -13,7 +16,7 @@ public sealed class RealModelTests {
             new("paste","https://docs.google.com/spreadsheets/d/test-tracker/edit","Internship tracker",Label:"Tracker!A2:E2",Value:"Acme Labs\tSoftware Engineering Intern\tLondon\t£25,000\thttps://careers.example.org/jobs/100"),
             new("page","https://docs.google.com/spreadsheets/d/test-tracker/edit","Internship tracker","Row 2 saved in Tracker. Company=Acme Labs, Role=Software Engineering Intern, Location=London, Salary=£25,000, URL=https://careers.example.org/jobs/100")];
         var w=await ai.Discover(trace,default);
-        var reportDir=Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath();Directory.CreateDirectory(reportDir);
+        Directory.CreateDirectory(reportDir);
         await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-discovery.json"),Json.Write(w));
         Assert.Contains(w.Steps,s=>s.Kind=="appendRow");Assert.Equal(5,w.Columns.Length);w.Validate();Assert.DoesNotContain(w.Variables,v=>v.Description.Contains("Acme Labs"));
         foreach(var page in new[]{new Evidence("page","https://jobs.other.test/role/77","Opportunity at Nova","<Overview> Nova Robotics is hiring a Research Intern. Office: Bristol. Application: https://jobs.other.test/role/77. Compensation not disclosed."),new Evidence("page","https://work.third.test/vacancy/42","Careers","Position: Research Intern | Organisation: Nova Robotics | Work location: Bristol | Apply here: https://work.third.test/vacancy/42")}) {

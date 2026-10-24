@@ -1,0 +1,45 @@
+name: Windows real model QA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  first-run-and-repeat:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build Kopi.sln -c Release
+      - name: Package native prerequisites in the real test application
+        run: ./scripts/package-native.ps1 -PublishDir tests/Kopi.Tests/bin/Release/net10.0
+      - name: Two real Windows download, load and inference passes
+        shell: pwsh
+        env:
+          KOPI_WINDOWS_MODEL_QA: '1'
+        run: |
+          New-Item artifacts/windows-model-qa -ItemType Directory -Force | Out-Null
+          $ram=(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+          $cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1).Name
+          @{ramBytes=$ram;cpu=$cpu;logicalProcessors=[Environment]::ProcessorCount;os=[Environment]::OSVersion.VersionString} | ConvertTo-Json | Set-Content artifacts/windows-model-qa/hardware.json
+          Write-Output "::notice title=QA hardware::RAM bytes=$ram CPU=$cpu logical processors=$([Environment]::ProcessorCount)"
+          dotnet test tests/Kopi.Tests --no-build -c Release --filter FullyQualifiedName~WindowsModelQaTests --logger 'trx;LogFileName=windows-deep-qa.trx' --logger 'console;verbosity=detailed'
+          $result=$LASTEXITCODE
+          Get-ChildItem tests -Recurse -Filter windows-deep-qa.trx | ForEach-Object {
+            [xml]$trx=Get-Content $_.FullName
+            foreach($r in $trx.TestRun.Results.UnitTestResult) {
+              $message=([string]$r.Output.StdOut+"`n"+[string]$r.Output.ErrorInfo.Message+"`n"+[string]$r.Output.ErrorInfo.StackTrace).Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+              if($r.outcome -eq 'Failed'){Write-Output "::error title=Deep Windows model QA::$message"}else{Write-Output "::notice title=Deep Windows model QA::$message"}
+            }
+          }
+          exit $result
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-real-model-QA
+          path: |
+            **/TestResults/windows-deep-qa.trx
+            artifacts/windows-model-qa/pass*/*
+            artifacts/windows-model-qa/hardware.json
