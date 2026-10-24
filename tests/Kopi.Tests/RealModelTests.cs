@@ -19,7 +19,7 @@ public sealed class RealModelTests {
         Directory.CreateDirectory(reportDir);
         await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-discovery.json"),Json.Write(w));
         if(w.Questions.Length>0){
-            w=await ai.Clarify(w,"Confirm the demonstrated Tracker tab and the left-to-right columns Company, Role, Location, Salary, URL. Salary is optional. Reuse the configured spreadsheet, with fresh values from each new listing. Demonstrated values are examples, not constants. Append one row; do not navigate back to the demonstrated source.",default);
+            w=await ai.Clarify(w,"Yes. The exact tab name is Tracker. The column order is Company, Role, Location, Salary, URL. Salary may be blank. Each run uses the new listing. Keep the configured destination and append one new row.",default);
             await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-after-user-clarification.json"),Json.Write(w));
         }
         Assert.Contains(w.Steps,s=>s.Kind=="appendRow");Assert.Equal(5,w.Columns.Length);w.Validate();Assert.DoesNotContain(w.Variables,v=>v.Description.Contains("Acme Labs"));

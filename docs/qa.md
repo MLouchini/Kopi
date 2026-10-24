@@ -37,3 +37,15 @@ A download page and installer workflow do not establish publication. Check the r
 
 - Final screenshot review found the initial fixed window could extend beyond a small monitor. Version 0.1.1 clamps startup dimensions to the Windows work area; CI now checks the window bounds before capturing the WPF screenshot.
 - Actual local-model positive and negative trigger recognition checks also passed: a fresh relevant listing matches, an unrelated privacy-policy page does not.
+
+## Follow-up QA: Windows first run and learned transient values
+
+A deeper opt-in Windows workflow now uses the application's actual ModelRuntime.Download/Start code, rather than just checking native `--version`. On a Windows runner with 17,174,360,064 bytes of RAM (about 16 GiB), four logical processors and an AMD EPYC CPU, the download/checksum path completed in 41.3 seconds in one measured run. The cold path exercised real Gemma inference; a verified-cache reinstall, stop/restart and repeat inference also passed, completing the warm pass in 79.1 seconds. Native peak working set was approximately 2,746 MiB. Network speed, CPU and memory accounting differ from the user's Intel laptop; these are measurements, not promised laptop performance.
+
+Download QA found and fixed restarting partial downloads, retaining duplicate model files, and returning early from an incomplete model startup. Downloads now resume when supported, restart safely when Range is ignored, reject checksum mismatches and retain only one installed weight file. Model shutdown waits for process exit before replacing files.
+
+Workflow QA found that code text could leak through element labels even when input values were excluded. Recorder/snapshot tests now exercise both channels. Numeric authentication values are redacted from teaching evidence while retaining field/source metadata. These heuristics are not a general PII classifier.
+
+The local-model tests now distinguish task understanding from executable binding compilation. Initial model trials picked a submit button as a success marker and an input as an account identity. The compiler now constrains bindings to observed identity labels, request/submit controls, timestamped message elements and an independently observed success state. Another failure was repeated confirmation questions after a user answer; clarification now has a separate actual-model question-resolution stage.
+
+The normal Windows suite additionally exercises fresh transfer success, wrong sender/account, stale/ambiguous/missing codes, already-completed or changed challenges, cancellation and duplicate prevention. The deeper workflow is being rerun to cover actual model learning → extension execution, persistent workflow reuse after restart and a WhatsApp-style timestamp fixture. Its final run outcome must be checked separately; earlier native/browser successes do not establish that this expanded pipeline has passed.

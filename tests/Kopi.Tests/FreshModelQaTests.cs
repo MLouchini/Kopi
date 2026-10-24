@@ -12,12 +12,15 @@ public sealed class FreshModelQaTests {
         new("click",Portal,"Verify identity",Label:"Verify",Selector:"#submit"),
         new("page",Portal,"Signed in","Example University. Welcome to your account.",Context:"[{\"selector\":\"#success\",\"tag\":\"h2\",\"label\":\"Welcome to your account\"}]")
     ];
-    [LocalModelFact]public async Task LearnsTransientTransferFromDemonstration()=>await Learn(new LlamaModel(),Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath());
-    public static async Task<Workflow> Learn(ILocalModel model,string reportDir) {
+    [LocalModelFact]public async Task LearnsTransientTransferFromDemonstration(){using var model=new LlamaModel();await Learn(model,Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath());}
+    [LocalModelFact]public async Task LearnsMessagingTimestampLayout(){using var model=new LlamaModel();await Learn(model,Path.Combine(Environment.GetEnvironmentVariable("KOPI_REPORT_DIR")??Path.GetTempPath(),"messaging-layout"),true);}
+    public static async Task<Workflow> Learn(ILocalModel model,string reportDir,bool messagingLayout=false) {
         var ai=new Intelligence(model);var trace=Demonstration;
+        if(messagingLayout)trace=trace.Select(e=>e with{Url=e.Url==Inbox?"https://web.whatsapp.com/":e.Url,Text=e.Text.Replace("University Identity Service","Microsoft"),Context=e.Context.Replace("University Identity Service","Microsoft").Replace("data-time","data-pre-plain-text").Replace("2026-10-24T12:00:01Z","[12:00, 24/10/2026] Microsoft: ").Replace("ISO timestamps","day/month/year timestamps"),Label=e.Label.Replace("University Identity Service","Microsoft")}).ToArray();
         var understanding=await ai.Understand(trace,default);Assert.True(understanding.RequiresFreshValues);Assert.True(understanding.RequiresSensitiveValues);
         var w=await ai.Discover(trace,default);Directory.CreateDirectory(reportDir);await File.WriteAllTextAsync(Path.Combine(reportDir,"learned-fresh-transfer.json"),Json.Write(w));
-        w.Validate();Assert.True(w.IsFreshTransfer);Assert.Empty(w.Variables);Assert.Equal(Portal,w.Steps[0].Url);Assert.Equal(Inbox,w.Steps[0].Transfer!.SourceUrl);Assert.Equal(6,w.Steps[0].Transfer!.Digits);
+        w.Validate();Assert.True(w.IsFreshTransfer);Assert.Empty(w.Variables);Assert.Equal(Portal,w.Steps[0].Url);Assert.Equal(messagingLayout?"https://web.whatsapp.com/":Inbox,w.Steps[0].Transfer!.SourceUrl);
+        if(messagingLayout){Assert.Equal("data-pre-plain-text",w.Steps[0].Transfer!.TimestampAttribute);Assert.Equal("dmy",w.Steps[0].Transfer!.TimestampFormat);}Assert.Equal(6,w.Steps[0].Transfer!.Digits);
         Assert.False(w.Approved);Assert.False(w.AutoRun);
         Assert.True(await ai.Relevant(w,new("page",Portal,"Verify identity","Example University. Enter the new verification code sent to your messages."),default));
         Assert.False(await ai.Relevant(w,new("page","https://news.test/story","Campus news","The university opened a new library. It has no sign-in requirement."),default));
