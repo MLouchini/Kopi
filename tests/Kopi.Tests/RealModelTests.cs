@@ -18,6 +18,10 @@ public sealed class RealModelTests {
         var w=await ai.Discover(trace,default);
         Directory.CreateDirectory(reportDir);
         await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-discovery.json"),Json.Write(w));
+        if(w.Questions.Length>0){
+            w=await ai.Clarify(w,"Confirm the demonstrated Tracker tab and the left-to-right columns Company, Role, Location, Salary, URL. Salary is optional. Reuse the configured spreadsheet, with fresh values from each new listing. Demonstrated values are examples, not constants. Append one row; do not navigate back to the demonstrated source.",default);
+            await File.WriteAllTextAsync(Path.Combine(reportDir,"gemma-after-user-clarification.json"),Json.Write(w));
+        }
         Assert.Contains(w.Steps,s=>s.Kind=="appendRow");Assert.Equal(5,w.Columns.Length);w.Validate();Assert.DoesNotContain(w.Variables,v=>v.Description.Contains("Acme Labs"));
         foreach(var page in new[]{new Evidence("page","https://jobs.other.test/role/77","Opportunity at Nova","<Overview> Nova Robotics is hiring a Research Intern. Office: Bristol. Application: https://jobs.other.test/role/77. Compensation not disclosed."),new Evidence("page","https://work.third.test/vacancy/42","Careers","Position: Research Intern | Organisation: Nova Robotics | Work location: Bristol | Apply here: https://work.third.test/vacancy/42")}) {
             var values=await ai.Extract(w,page,default);

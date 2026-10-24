@@ -19,5 +19,12 @@ public sealed class FreshTransferTests {
         await page.Locator("#sender").EvaluateAsync("e=>e.textContent='Someone Else'");
         await Assert.ThrowsAsync<PlaywrightException>(()=>page.EvaluateAsync("p=>KopiFresh.candidates(JSON.parse(p))",Json.Write(new{rule=Rule})));
     }
+    [Theory][InlineData("dmy","[12:34, 24/10/2026] Identity Service: ")][InlineData("mdy","[12:34, 10/24/2026] Identity Service: ")]
+    public async Task ParsesTimestampedMessageLayouts(string format,string timestamp){
+        using var pw=await Playwright.CreateAsync();await using var browser=await pw.Chromium.LaunchAsync(new(){Headless=true,ExecutablePath=Environment.GetEnvironmentVariable("KOPI_CHROMIUM")});var page=await browser.NewPageAsync();
+        await page.SetContentAsync("<main><h1 id='sender'>University Identity Service</h1><div class='message' data-pre-plain-text='"+timestamp+"'>Use code 123456</div></main>");await page.AddScriptTagAsync(new(){Path=Path.Combine(Root,"extension/fresh.js")});
+        var parts=await page.EvaluateAsync<int[]>("p=>{const c=KopiFresh.candidates(JSON.parse(p))[0];const d=new Date(c.time);return [d.getFullYear(),d.getMonth()+1,d.getDate(),d.getHours(),d.getMinutes()]}",Json.Write(new{rule=Rule with{TimestampAttribute="data-pre-plain-text",TimestampFormat=format}}));
+        Assert.Equal(new[]{2026,10,24,12,34},parts);
+    }
     sealed record Candidate(string Key,double? Time,string? Value,bool Ambiguous);
 }

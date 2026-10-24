@@ -36,6 +36,7 @@ jobs:
               if($r.outcome -eq 'Failed'){Write-Output "::error title=Deep Windows model QA::$message"}else{Write-Output "::notice title=Deep Windows model QA::$message"}
             }
           }
+          if($result -ne 0){Get-ChildItem artifacts/windows-model-qa/pass*/*.json -ErrorAction SilentlyContinue | ForEach-Object { $detail=(Get-Content $_.FullName -Raw).Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A');Write-Output "::notice title=$($_.Name)::$detail" }}
           exit $result
       - uses: actions/upload-artifact@v4
         if: always()

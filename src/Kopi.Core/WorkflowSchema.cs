@@ -5,6 +5,7 @@ public static class WorkflowSchema {
         var node=System.Text.Json.Nodes.JsonNode.Parse(Value.GetRawText())!;
         var props=node["properties"]!;
         props["sourceHosts"]!["maxItems"]=0;
+        props["variables"]!["minItems"]=1;props["steps"]!["items"]!["properties"]!.AsObject().Remove("transfer");
         props["steps"]!["minItems"]=1; props["steps"]!["maxItems"]=1;
         props["steps"]!["items"]!["properties"]!["kind"]!["enum"]=new System.Text.Json.Nodes.JsonArray("appendRow");
         props["steps"]!["items"]!["properties"]!["url"]!["enum"]=new System.Text.Json.Nodes.JsonArray(url);

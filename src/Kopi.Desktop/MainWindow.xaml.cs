@@ -111,10 +111,11 @@ public partial class MainWindow : Window {
             await EnsureModel(ct);
             foreach(var w in workflows.Where(w=>w.Approved&&(!w.IsFreshTransfer||new Uri(w.Steps[0].Url).GetLeftPart(UriPartial.Path)==new Uri(e.Url).GetLeftPart(UriPartial.Path)))) if(await ai.Relevant(w,e,ct)) {
                 if(w.AutoRun&&w.IsFreshTransfer) {
+                    WorkflowList.SelectedItem=w;
                     if(string.IsNullOrWhiteSpace(e.InstanceId))throw new InvalidOperationException("Automatic transfer needs a current challenge instance.");
                     await bridge.Send("bind",new{instanceId=e.InstanceId},ct);
                     RunProgress.Text=await new Executor(bridge,store).Run(w,new(),new Progress<string>(s=>RunProgress.Text=s),ct,e.InstanceId);
-                    StatusText.Text=RunProgress.Text;return;
+                    StatusText.Text=RunProgress.Text;tray.ShowBalloonTip(4000,"Kopi",w.Name+": verified.",System.Windows.Forms.ToolTipIcon.Info);return;
                 }
                 WorkflowList.SelectedItem=w; Tabs.SelectedIndex=2;
                 tray.ShowBalloonTip(5000,"Kopi found a shortcut",$"{w.Name} may fit this page. Open Kopi to preview it.",System.Windows.Forms.ToolTipIcon.Info);

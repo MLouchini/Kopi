@@ -34,7 +34,8 @@ async function appendRow(tabId,p){
  throw Error('Could not verify the new row. Check the spreadsheet before retrying.');
 }
 async function freshInvoke(tabId,method,payload){await chrome.scripting.executeScript({target:{tabId},files:['fresh.js']});const [r]=await chrome.scripting.executeScript({target:{tabId},func:async(m,p)=>{try{return {value:await KopiFresh[m](p)};}catch(e){return {error:e.message};}},args:[method,payload]});if(r?.result?.error)throw Error(r.result.error);return r?.result?.value;}
-async function freshTransfer(destinationId,step){
+async function freshTransfer(destinationId,step,signal){
+ signal.throwIfAborted();
  const rule=step.transfer;const destination=await chrome.tabs.get(destinationId);const expected=new URL(step.url),actual=new URL(destination.url);
  if(expected.origin!==actual.origin||expected.pathname!==actual.pathname)throw Error('The approved verification page is not active.');
  const sourceUrl=new URL(rule.sourceUrl);const tabs=await chrome.tabs.query({});let source=tabs.find(t=>{try{const u=new URL(t.url);return u.origin===sourceUrl.origin&&u.pathname===sourceUrl.pathname;}catch{return false;}});
@@ -42,24 +43,24 @@ async function freshTransfer(destinationId,step){
  await chrome.tabs.update(source.id,{active:true});stage='checking approved message source';
  let matched=false;for(let i=0;i<10;i++){if(await freshInvoke(source.id,'source',{rule})){matched=true;break;}await new Promise(r=>setTimeout(r,300));}if(!matched)throw Error('Open the approved message conversation first.');
  const old=await freshInvoke(source.id,'candidates',{rule});const seen=new Set(old.map(x=>x.key));
- const requestedAt=Date.now();await chrome.tabs.update(destinationId,{active:true});const binding=await freshInvoke(destinationId,'request',{step});
+ signal.throwIfAborted();const requestedAt=Date.now();await chrome.tabs.update(destinationId,{active:true});const binding=await freshInvoke(destinationId,'request',{step});
  stage='waiting for a fresh scoped value';const deadline=Date.now()+rule.waitSeconds*1000;let value=null;
  try {
-  while(Date.now()<deadline){const entries=await freshInvoke(source.id,'candidates',{rule});const earliest=['dmy','mdy'].includes(rule.timestampFormat)?Math.floor(requestedAt/60000)*60000:requestedAt;
+  while(Date.now()<deadline){signal.throwIfAborted();const entries=await freshInvoke(source.id,'candidates',{rule});signal.throwIfAborted();const earliest=['dmy','mdy'].includes(rule.timestampFormat)?Math.floor(requestedAt/60000)*60000:requestedAt;
    const fresh=entries.filter(x=>!seen.has(x.key)&&Number.isFinite(x.time)&&x.time>=earliest&&x.time<=Date.now()+5000);
    if(fresh.some(x=>x.ambiguous)||fresh.filter(x=>x.value).length>1)throw Error('Multiple fresh values match. Automatic transfer stopped.');
    const one=fresh.find(x=>x.value);if(one){value=one.value;break;}await new Promise(r=>setTimeout(r,500));
   }
   if(!value)throw Error('No unambiguous fresh value arrived in time. Nothing was submitted.');
-  stage='completing the approved verification';await chrome.tabs.update(destinationId,{active:true});return await freshInvoke(destinationId,'complete',{step,value,instanceId:binding.instanceId});
+  signal.throwIfAborted();stage='completing the approved verification';await chrome.tabs.update(destinationId,{active:true});return await freshInvoke(destinationId,'complete',{step,value,instanceId:binding.instanceId});
  }finally{value=null;seen.clear();old.length=0;}
 }
-async function execute(c){
+async function execute(c,signal){
  if(c.kind==='snapshot'){runTab=await active();return inject(runTab,'snapshot',{});}
  if(c.kind==='bind'){runTab=c.payload.instanceId?pageInstances.get(c.payload.instanceId):await active();if(!runTab)throw Error('This observed page is no longer available.');return {bound:true};}
  if(c.kind!=='step')throw Error('Unknown command');
  const p=c.payload,s=p.step;
- if(s.kind==='transferFresh'){if(!runTab)runTab=await active();return freshTransfer(runTab,s);}
+ if(s.kind==='transferFresh'){if(!runTab)runTab=await active();return freshTransfer(runTab,s,signal);}
  if(s.kind==='navigate'||s.kind==='appendRow'){stage='opening destination';
   if(!/^https?:\/\//.test(s.url))throw Error('Unsupported URL');
   const tabs=await chrome.tabs.query({});const existing=tabs.find(t=>t.url?.split('#')[0]===s.url.split('#')[0]);
@@ -71,5 +72,5 @@ async function execute(c){
  if(s.kind==='appendRow')return appendRow(runTab,p);
  return inject(runTab,'action',p);
 }
-async function poll(){if(busy)return;busy=true;try{const r=await api('/poll');state={observing:r.observing,suggestions:r.suggestions};const tabs=await chrome.tabs.query({});for(const t of tabs)chrome.tabs.sendMessage(t.id,{state}).catch(()=>{});if(r.command){const c=r.command;const heartbeat=setInterval(()=>api('/ping',{stage}).catch(()=>{}),5000);try{const value=await Promise.race([execute(c),new Promise((_,reject)=>setTimeout(()=>reject(Error('Browser action exceeded 60 seconds while '+stage+'. Check the destination before retrying.')),60000))]);await api('/result',{id:c.id,result:JSON.stringify(value)});}catch(e){await api('/result',{id:c.id,error:e.message});}finally{clearInterval(heartbeat);}}}catch{}finally{busy=false;}}
+async function poll(){if(busy)return;busy=true;try{const r=await api('/poll');state={observing:r.observing,suggestions:r.suggestions};const tabs=await chrome.tabs.query({});for(const t of tabs)chrome.tabs.sendMessage(t.id,{state}).catch(()=>{});if(r.command){const c=r.command;const controller=new AbortController();const heartbeat=setInterval(()=>api('/ping',{stage,id:c.id}).then(r=>{if(r.cancelled)controller.abort();}).catch(()=>{}),500);try{const value=await Promise.race([execute(c,controller.signal),new Promise((_,reject)=>setTimeout(()=>{controller.abort();reject(Error('Browser action exceeded 60 seconds while '+stage+'. Check the destination before retrying.'));},60000))]);await api('/result',{id:c.id,result:JSON.stringify(value)});}catch(e){await api('/result',{id:c.id,error:e.message});}finally{clearInterval(heartbeat);}}}catch{}finally{busy=false;}}
 setInterval(poll,1000);chrome.alarms.create('kopi',{periodInMinutes:0.5});chrome.alarms.onAlarm.addListener(poll);poll();

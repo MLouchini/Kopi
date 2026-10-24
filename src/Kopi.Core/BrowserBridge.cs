@@ -42,7 +42,10 @@ public sealed class BrowserBridge : IBrowserSession, IDisposable {
             LastSeen=DateTime.UtcNow;
             using var reader=new StreamReader(c.Request.Body);var body=await reader.ReadToEndAsync(c.RequestAborted);
             switch(c.Request.Path.Value) {
-                case "/ping": await Reply(c,new{ok=true});break;
+                case "/ping":
+                    var heartbeat=Json.Read<Dictionary<string,System.Text.Json.JsonElement>>(body);
+                    var activeId=heartbeat.TryGetValue("id",out var cid)?cid.GetString():null;
+                    await Reply(c,new{ok=true,cancelled=activeId!=null&&!pending.ContainsKey(activeId)});break;
                 case "/poll":
                     BrowserCommand? command=null;
                     while(queue.TryDequeue(out var candidate)){if(pending.ContainsKey(candidate.Id)){command=candidate;break;}}

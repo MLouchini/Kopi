@@ -25,7 +25,7 @@ public static class FreshCompiler {
         var initial=events.FirstOrDefault(e=>e.Url==target.Url&&e.Kind=="page");
         var final=events.LastOrDefault(e=>e.Url==target.Url&&e.Kind=="page");
         var before=initial==null?[]:Inventory(initial);var after=final==null?[]:Inventory(final);
-        var targetGuards=before.Where(n=>n.Tag is "h1" or "h2" or "header" or "span"&&n.Label.Length>0).ToArray();
+        var targetGuards=before.Where(n=>n.Tag is "h1" or "h2" or "header" or "span"&&n.Label.Length>0&&!Regex.IsMatch(n.Label,@"^(enter( your| the)? (code|verification)|verify( your)? identity|sign[ -]?in|verification|security code)\b",RegexOptions.IgnoreCase)).ToArray();
         var sourceGuards=events.Where(e=>e.Url==source.Url).SelectMany(Inventory).Where(n=>n.Tag is "h1" or "h2" or "header" or "span"&&n.Label.Length>0&&!n.Label.Contains("omitted")).Distinct().ToArray();
         var success=after.Select(n=>n.Selector).Except(before.Select(n=>n.Selector)).ToArray();
         var clicks=events.Where(e=>e.Url==target.Url&&e.Kind=="click"&&e.Selector.Length>0).Select(e=>e.Selector).Distinct().ToArray();

@@ -38,6 +38,6 @@ public static class VerifiedDownload {
                 progress.Report($"Connection interrupted. Resuming download (attempt {attempt+2} of 3)…");await Task.Delay(500*(attempt+1),ct);
             }
         }
-        throw new IOException("Download could not complete. Try again; verified partial progress is retained until the final checksum is checked.");
+        throw new IOException("Download could not complete. Try again; partial progress is retained, and the complete file must pass its checksum before use.");
     }
 }
