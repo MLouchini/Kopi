@@ -4,11 +4,23 @@ let state={observing:false,suggestions:false},busy=false,runTab=null,stage='idle
 async function api(path,body={},extra={}){const {token}=await chrome.storage.local.get('token');const r=await fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(token||''),...extra},body:JSON.stringify(body)});if(!r.ok)throw Error(r.status===401?'Pair Kopi with the desktop app.':`Kopi connection failed (${r.status})`);return r.json();}
 chrome.runtime.onMessage.addListener((m,sender,reply)=>{
  if(m.pair){api('/pair',{}, {'X-Kopi-Pair':m.pair}).then(async r=>{await chrome.storage.local.set({token:r.token});reply({ok:true});}).catch(e=>reply({error:e.message}));return true;}
- if(m.event){if(sender.tab?.id&&m.event.instanceId){pageInstances.set(m.event.instanceId,sender.tab.id);if(pageInstances.size>1000)pageInstances.delete(pageInstances.keys().next().value);}if(state.observing||state.suggestions&&m.event.kind==='page')api('/event',m.event).catch(()=>{});}
+ if(m.event){if(sender.tab?.id&&m.event.instanceId){pageInstances.set(m.event.instanceId,sender.tab.id);if(pageInstances.size>1000)pageInstances.delete(pageInstances.keys().next().value);}const event=sender.tab?.url?{...m.event,url:sender.tab.url}:m.event;if(state.observing||state.suggestions&&event.kind==='page')api('/event',event).catch(()=>{});}
 });
 async function active(){const [tab]=await chrome.tabs.query({active:true,lastFocusedWindow:true});if(!tab?.id||!/^https?:/.test(tab.url))throw Error('Open a normal website tab first.');return tab.id;}
 async function loaded(id){for(let i=0;i<100;i++){const t=await chrome.tabs.get(id);if(t.status==='complete')return;await new Promise(r=>setTimeout(r,100));}throw Error('Page loading timed out.');}
-async function inject(id,method,payload){await chrome.scripting.executeScript({target:{tabId:id},world:method==='csv'?'MAIN':'ISOLATED',files:['privacy.js','browser.js']});const [r]=await chrome.scripting.executeScript({target:{tabId:id},world:method==='csv'?'MAIN':'ISOLATED',func:async (m,p)=>{try{return {value:await globalThis.KopiBrowser[m](p)};}catch(e){return {error:e.message};}},args:[method,payload]});if(r?.result?.error)throw Error(r.result.error);return r?.result?.value;}
+async function inject(id,method,payload){
+ const target=method==='snapshot'?{tabId:id,allFrames:true}:{tabId:id};
+ await chrome.scripting.executeScript({target,world:method==='csv'?'MAIN':'ISOLATED',files:['privacy.js','browser.js']});
+ const results=await chrome.scripting.executeScript({target,world:method==='csv'?'MAIN':'ISOLATED',func:async(m,p)=>{try{return {value:await globalThis.KopiBrowser[m](p)};}catch(e){return {error:e.message};}},args:[method,payload]});
+ if(method==='snapshot'){
+  const top=results.find(r=>r.frameId===0)?.result?.value;
+  if(!top)throw Error('The active page could not be read.');
+  const frames=results.filter(r=>r.frameId!==0&&r.result?.value?.text).map(r=>r.result.value.text);
+  // Keep embedded document text ahead of surrounding app chrome within the evidence budget.
+  return {...top,text:[...frames,top.text].join('\n').slice(0,4000)};
+ }
+ const r=results[0];if(r?.result?.error)throw Error(r.result.error);return r?.result?.value;
+}
 function parseCsv(text){let rows=[],row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){field+='"';i++;}else quoted=!quoted;}else if(!quoted&&(c===','||c==='\n')){row.push(field.replace(/\r$/,''));field='';if(c==='\n'){rows.push(row);row=[];}}else field+=c;}row.push(field.replace(/\r$/,''));if(row.some(Boolean))rows.push(row);return rows;}
 async function appendRow(tabId,p){
  const u=new URL(p.step.url);if(u.hostname!=='docs.google.com'||!/^\/spreadsheets\/d\/[\w-]+/.test(u.pathname))throw Error('appendRow currently supports Google Sheets only.');

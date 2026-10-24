@@ -1,5 +1,16 @@
 # Local Windows continuation
 
+## Normal email workflow fixes — 24 October 2026
+
+- All temporary UI-demo code, hooks, flags, fixed contacts, sheet targets and artificial delays were removed. The saved temporary workflow was removed from the local library. Runtime source and compiled output were checked; only genuine model-driven discovery and execution remain. The obsolete static demo pages were removed as well.
+- A real recorded email-to-Sheets request failed because 9,554 tokens exceeded the 8,192-token context. Spreadsheet discovery now drops unused DOM locator/context metadata while retaining page evidence, clipboard values and column labels. Model rejection messages now include the backend's reason.
+- Clarification used to overwrite a rewritten proposal with questions calculated from the old proposal. It now returns the revised workflow and its own current questions together. Genuine unresolved questions still block approval.
+- Observation and snapshots share a rendered-text reader: read-only content is retained, while hidden text, editable drafts and sensitive inputs remain excluded. Related frames are observed and included in snapshots; events retain the enclosing tab URL.
+- Suggestions account for message text changes at the same URL and revisit the latest page after a busy operation. Preview now shows the source page and a short excerpt before approval.
+- Verified: desktop Release build passed with zero warnings/errors; 29 relevant regressions passed (one opt-in real-model test skipped in that run); a separate real Gemma test passed recorded framed-email discovery, user review/correction, extraction from a second contact and verified append through the paired extension into a Sheets fixture.
+- A separate read-only probe used the user's actual signed-in Outlook tab and local Gemma. Both expected contact fields were extracted correctly. No write to the user's actual Google Sheet was sent. The supplied Outlook DOM itself contained no iframe and was readable by the original snapshot too; frame support is a generic robustness fix, not a proven explanation of that live attempt.
+- Model proposals can still need correction, including extra inferred columns. Rehearse the actual account-to-Sheets flow before presenting. No preset answers or timers substitute for inference.
+
 ## Local setup verified — 24 October 2026
 
 - Installed Microsoft .NET SDK **10.0.402** with the .NET, ASP.NET Core and Windows Desktop **10.0.13** runtimes. Existing .NET 8 remains installed.

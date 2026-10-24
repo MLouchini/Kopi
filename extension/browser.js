@@ -1,10 +1,7 @@
 /* Shared browser primitives. Loaded by both extension and Playwright integration tests. */
 globalThis.KopiBrowser = {
   snapshot() {
-    const root = document.querySelector('main,article,[role=main]') || document.body;
-    const clone = root.cloneNode(true);
-    clone.querySelectorAll('script,style,input,textarea,[contenteditable],nav,footer,[hidden]').forEach(x=>x.remove());
-    return {kind:'page',instanceId:KopiPageInstance,url:location.href,title:document.title,text:KopiPrivacy.text((clone.innerText||clone.textContent||'').replace(/\s+/g,' ').slice(0,4000),document.title)};
+    return {kind:'page',instanceId:KopiPageInstance,url:location.href,title:document.title,text:KopiPrivacy.snapshotText()};
   },
   async action({step}) {
     if (!['fill','click'].includes(step.kind)) throw Error('Unsupported DOM action');

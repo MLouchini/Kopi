@@ -25,6 +25,7 @@ public partial class MainWindow : Window {
     string previewInstance="";
     readonly System.Windows.Forms.NotifyIcon tray = new() { Icon = System.Drawing.SystemIcons.Application, Visible = true, Text = "Kopi · local workflow assistant" };
     readonly HashSet<string> suggested = new();
+    Evidence? pendingSuggestion;
     public MainWindow() {
         InitializeComponent();
         var area=SystemParameters.WorkArea;
@@ -47,7 +48,10 @@ public partial class MainWindow : Window {
         try { await action(work.Token); }
         catch (OperationCanceledException) { StatusText.Text = "Stopped waiting. An action already sent to the browser may finish; inspect the destination before retrying."; }
         catch (Exception ex) { StatusText.Text = ex.Message; MessageBox.Show(this, ex.Message, "Kopi needs your attention", MessageBoxButton.OK, MessageBoxImage.Information); }
-        finally { busy = false; work.Dispose(); work = null; CancelButton.Visibility = Visibility.Collapsed; Tabs.IsEnabled = true; }
+        finally {
+            busy = false; work.Dispose(); work = null; CancelButton.Visibility = Visibility.Collapsed; Tabs.IsEnabled = true;
+            if(pendingSuggestion is {} latest){pendingSuggestion=null;if(bridge.Suggestions&&!bridge.Observing)_=Dispatcher.InvokeAsync(()=>OnEvidence(latest));}
+        }
     }
     IProgress<string> Progress() => new Progress<string>(s => StatusText.Text = s);
     async Task EnsureModel(CancellationToken ct) => await runtime.Start(Progress(),ct);
@@ -90,7 +94,7 @@ public partial class MainWindow : Window {
         var w=Selected(); RunButton.IsEnabled=false; previewWorkflow=null;
         await EnsureModel(ct); var page=Json.Read<Evidence>(await bridge.Send("snapshot",new{},ct));
         StatusText.Text="Extracting new values locally…"; var values=w.IsFreshTransfer?new Dictionary<string,string>():await ai.Extract(w,page,ct);previewInstance=page.InstanceId; ValuesJson.Text=Json.Write(values); ValuesGrid.ItemsSource=w.Variables.Select(v=>new RunValue{Name=v.Name,Value=values.GetValueOrDefault(v.Name,""),Required=v.Required}).ToList(); previewWorkflow=w;
-        RunDestination.Text="You are approving: "+w.Goal+"\nDestination(s): "+string.Join(", ",w.Steps.Where(s=>s.Url.Length>0).Select(s=>s.Url));
+        RunDestination.Text="Source: "+page.Title+" ("+Workflow.SafeUrl(page.Url).GetLeftPart(UriPartial.Path)+")\n"+Privacy.Limit(Privacy.Sanitize(page).Text,180)+"\n\nYou are approving: "+w.Goal+"\nDestination(s): "+string.Join(", ",w.Steps.Where(s=>s.Url.Length>0).Select(s=>s.Url));
         RunButton.IsEnabled=true; StatusText.Text="Review the extracted values, then approve this run.";
     });
     async void RunWorkflow(object sender,RoutedEventArgs e) => await Guard(async ct=>{
@@ -105,8 +109,10 @@ public partial class MainWindow : Window {
     async void OnEvidence(Evidence e) {
         PairCodeBox.Text=bridge.PairCode;
         if(bridge.Observing) { if(recording.Count<200){recording.Add(e);CaptureCount.Text=$"{recording.Count} observations · recording in memory";}else{bridge.Observing=false;RecordButton.IsEnabled=true;StopButton.IsEnabled=true;StatusText.Text="Recording limit reached. Stop and discover, or start a shorter demonstration.";} return; }
-        if(!bridge.Suggestions||busy||e.Kind!="page"||workflows.Count==0)return;
-        var key=e.Url+"|"+e.InstanceId; if(suggested.Contains(key))return; suggested.Add(key);
+        if(!bridge.Suggestions||e.Kind!="page"||workflows.Count==0)return;
+        if(busy){pendingSuggestion=e;return;}
+        var content=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(e.Text)));
+        var key=e.Url+"|"+e.InstanceId+"|"+content; if(suggested.Contains(key))return; suggested.Add(key);
         await Guard(async ct=>{
             await EnsureModel(ct);
             foreach(var w in workflows.Where(w=>w.Approved&&(!w.IsFreshTransfer||new Uri(w.Steps[0].Url).GetLeftPart(UriPartial.Path)==new Uri(e.Url).GetLeftPart(UriPartial.Path)))) if(await ai.Relevant(w,e,ct)) {

@@ -2,6 +2,20 @@ using Kopi.Core;
 using Xunit;
 namespace Kopi.Tests;
 public sealed class EngineTests {
+    sealed class ClarificationModel(Workflow revised) : ILocalModel {
+        public Task<string> Complete(string instruction,string evidence,CancellationToken ct,System.Text.Json.JsonElement? schema=null)
+            =>Task.FromResult(instruction.StartsWith("Identify ONLY")?"{\"questions\":[\"What is the source URL?\"]}":Json.Write(revised));
+    }
+    [Fact] public async Task ClarificationDoesNotRestoreQuestionsAboutRemovedColumns() {
+        var revised=new Workflow{Name="Save contact",Goal="Append name and email",Trigger="A contact email",
+            Variables=[new("name","Full name"),new("email","Email address")],Columns=["name","email"],SheetName="Contacts",
+            Steps=[new("appendRow","https://docs.google.com/spreadsheets/d/test/edit")]};
+        var original=Json.Read<Workflow>(Json.Write(revised));
+        original.Variables.Add(new("source_url","Source URL",false));original.Columns=["name","email","source_url"];
+        original.Questions=["What is the source URL?"];
+        var result=await new Intelligence(new ClarificationModel(revised)).Clarify(original,"Only name and email belong in the sheet; remove the source URL column.",default);
+        Assert.Empty(result.Questions);Assert.Equal(2,result.Columns.Length);result.Validate();Assert.False(result.Approved);
+    }
     sealed class NonPumpingContext : SynchronizationContext {
         public override void Post(SendOrPostCallback callback,object? state) { }
     }

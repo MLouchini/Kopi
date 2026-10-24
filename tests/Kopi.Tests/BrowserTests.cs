@@ -3,6 +3,16 @@ using Microsoft.Playwright;
 using Xunit;
 namespace Kopi.Tests;
 public sealed class BrowserTests {
+    [Fact] public async Task SnapshotReadsReadOnlyMessageAndExcludesHiddenAndDraftText() {
+        using var pw=await Playwright.CreateAsync();
+        await using var browser=await pw.Chromium.LaunchAsync(new(){Headless=true,ExecutablePath=Environment.GetEnvironmentVariable("KOPI_CHROMIUM")});
+        var page=await browser.NewPageAsync();
+        await page.SetContentAsync("<main><div contenteditable='false'>Hi, I am Alina Reid. Contact alina@cedar.example.</div><div style='display:none'>HIDDEN_PRIVATE_TEXT</div><div contenteditable='true'>UNSENT_DRAFT</div><input type='password' value='PASSWORD_SECRET'></main>");
+        foreach(var file in new[]{"privacy.js","browser.js"})await page.AddScriptTagAsync(new(){Path=Path.Combine(Root,"extension",file)});
+        var text=await page.EvaluateAsync<string>("()=>KopiBrowser.snapshot().text");
+        Assert.Contains("Alina Reid",text);Assert.Contains("alina@cedar.example",text);
+        Assert.DoesNotContain("HIDDEN_PRIVATE_TEXT",text);Assert.DoesNotContain("UNSENT_DRAFT",text);Assert.DoesNotContain("PASSWORD_SECRET",text);
+    }
     static string Root => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../"));
     [Fact] public async Task SharedPrimitivesFillAndVerifyRealForm() {
         using var pw=await Playwright.CreateAsync(); await using var browser=await pw.Chromium.LaunchAsync(new(){Headless=true,ExecutablePath=Environment.GetEnvironmentVariable("KOPI_CHROMIUM")});var page=await browser.NewPageAsync();

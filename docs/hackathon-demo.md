@@ -1,6 +1,6 @@
 # Hackathon demo: real email to Google Sheets
 
-Use the actual Gmail or Outlook browser session you already use. The user chose real email instead of the optional demo website.
+Use the actual Gmail or Outlook browser session you already use. Learning and extraction use the real local model; review and approve the result before execution.
 
 1. Create a Google Sheet, name its tab **Leads**, and put these headers in A1:D1: **Name | Email | Request | Budget**. Keep rows below empty.
 2. Send yourself the first sample email below. Open that message in your browser and pair the Kopi extension.
@@ -33,3 +33,11 @@ Sam
 “I show Kopi one example of moving a lead from my email into my tracker. This is my normal browser, and the model runs locally. Now I open a different email. Kopi extracts its new details, I review them, and it adds the next row.”
 
 Google Sheets uses the clipboard and a visible browser debugger banner. Check the resulting row before presenting it as successful. Use a new message for the second run; uncertain or duplicate attempts can be blocked by receipts.
+
+## Alternative: build a hackathon toolbox
+
+Use public GitHub repositories as the source and a Google Sheet with columns **Tool | What it does | Link**, on a tab named **Toolbox**. This avoids email setup and keeps the input small.
+
+Demonstrate adding [Microsoft MarkItDown](https://github.com/microsoft/markitdown), a document-to-Markdown tool. Review and save the inferred workflow. Then open [Typer](https://github.com/fastapi/typer), preview its new repository details and approve a second row. Check the variable descriptions and exact column order during review. Rehearse this source variation before presenting; the recorded-email end-to-end test does not establish that every repository layout works.
+
+Pitch: “I taught Kopi to catalogue one tool. Now it helps build our project research list from new repositories.”
