@@ -1,43 +1,35 @@
-# Hackathon demonstration: enquiry → lead inbox
+# Hackathon demo: real email to Google Sheets
 
-Use the fictional demo workspace at [the hosted demo](https://mlouchini.github.io/Kopi/demo/) or, while the local preview is running, [localhost](http://127.0.0.1:4173/demo/). No messaging service, email access, login or spreadsheet permission is needed.
+Use the actual Gmail or Outlook browser session you already use. The user chose real email instead of the optional demo website.
 
-## Prepare
+1. Create a Google Sheet, name its tab **Leads**, and put these headers in A1:D1: **Name | Email | Request | Budget**. Keep rows below empty.
+2. Send yourself the first sample email below. Open that message in your browser and pair the Kopi extension.
+3. In Kopi, start recording. Copy the lead details into A2:D2 of the sheet, in header order. Return to Kopi and choose **Stop & discover**.
+4. Review the proposed workflow. Confirm the spreadsheet URL, tab **Leads**, and column variables **name, email, request, budget** in exactly that order. It should append a row, rather than replay canvas clicks. Answer genuine clarification questions.
+5. Approve and save. Open a second message containing different lead details, select the workflow and preview it. Confirm the values came from the second message, approve, then show the new sheet row.
 
-1. Open the demo guide, enquiry A and lead inbox in your usual browser. Load and pair Kopi's extension. Start the local model before presenting.
-2. Clear the inbox's demo rows. Make a fresh saved workflow for each rehearsal: clearing website rows does not clear Kopi's separate duplicate-prevention receipts.
-3. Rehearse learning, review and execution before going on stage. Local inference time and clarification questions can vary. The demo pages working does not establish that a model-learned run has passed.
+Start the local model before presenting and rehearse once. Gmail/Outlook-to-Sheets has not been tested against the user's actual account in this session. The expanded model QA recorded a spreadsheet clarification failure; do not promise that learning will need no corrections. A previously rehearsed and reviewed workflow is a reasonable live-demo fallback if you disclose it.
 
-## Show the demonstration
+## First email
 
-1. On **Enquiry A**, start observing in Kopi.
-2. Select and copy the four labelled values with ordinary Ctrl+C, then paste each into the corresponding inbox field:
-   - Contact name: Maya Chen
-   - Email: maya@northstar.example
-   - Project: Website refresh
-   - Budget: £2,400
-3. Click **Save lead**. Let Kopi observe the green **Lead saved** state and the new row.
-4. Stop and discover. Review the proposed workflow. It should use variables for the four values, navigate to this inbox, fill its observed fields, click its save button and check the observed success marker. Answer genuine questions; do not clear them just to make the demonstration pass.
-5. Approve and save.
-6. Switch to **Enquiry B**. It has a different design and field order. Preview the saved workflow. Confirm the new values are **Sam Rivera**, **sam@fieldnote.example**, **Product launch microsite**, **£4,800**.
-7. Approve the run, then show both rows in the inbox.
+Subject: New enquiry — website refresh
 
-The app must infer these mappings from the demonstration. The pages do not configure Kopi, pre-load a workflow, or return canned model answers.
+Hi, I'm Maya Chen. I'd like a landing page redesign for our studio. The budget is £2,400. You can reach me at maya@aster.example.
 
-## A short presentation
+Thanks,
+Maya
 
-“I show Kopi one complete browser task: taking an enquiry and adding it to my lead inbox. It runs in the browser I'm already using, and the model stays on my computer.
+## Second email
 
-“Now here's a different enquiry. The layout and order are different. Kopi extracts the new details. I can inspect and correct them before it does anything.
+Subject: Could you help with our launch?
 
-“I approve, and the second lead is added. It's learned a reusable task from my demonstration.”
+Hello, my name is Sam Rivera. We need a product launch microsite and have £4,800 available. Please contact me at sam@fieldnote.example.
 
-Allow around 90 seconds of narration, plus the real inference time measured during your rehearsal. Do not promise a fixed runtime. If the model needs clarification, explain that review rather than hiding it.
+Best,
+Sam
 
-## Honest fallback
+## Presentation
 
-If learning needs further correction, show the recorded demonstration and editable proposed workflow, then explain what remains. You can save a previously rehearsed workflow for the live run, but disclose that it was learned and reviewed before presenting. Do not present a manual form submission as an autonomous run.
+“I show Kopi one example of moving a lead from my email into my tracker. This is my normal browser, and the model runs locally. Now I open a different email. Kopi extracts its new details, I review them, and it adds the next row.”
 
-## Behaviour and privacy
-
-All examples are fictional. Leads are stored only in this browser's local storage on the page's origin; no external form submission, email or message is sent. The destination uses normal labelled text/email inputs and visible success state. Source B deliberately differs from source A. These are generic browser fixtures, not a lead-specific path in application code.
+Google Sheets uses the clipboard and a visible browser debugger banner. Check the resulting row before presenting it as successful. Use a new message for the second run; uncertain or duplicate attempts can be blocked by receipts.
